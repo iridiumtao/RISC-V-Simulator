@@ -1,10 +1,13 @@
 from pathlib import Path
+
+from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
+from src.memory import InstructionMemory, DataMemory
 
 
 class Core(object):
-    def __init__(self, ioDir, instruction_memory, data_memory):
+    def __init__(self, ioDir, instruction_memory: InstructionMemory, data_memory: DataMemory):
         self.myRF = RegisterFile(ioDir)
         self.cycle = 0
         self.halted = False
@@ -42,7 +45,29 @@ class SingleStageCore(Core):
 
         # --------------------- IF stage ---------------------
 
+        new_inst_addr = self.state.IF["PC"]
+        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(new_inst_addr)
+        PC_next = new_inst_addr + 4
+        self.state.IF["PC"] = PC_next
+
         # --------------------- ID stage ---------------------
+
+        # todo: decode the instruction
+
+        inst_decoder = InstructionDecoder(self.state.ID["Instr"])
+        inst_decoder.decode()
+
+        self.state.EX["Read_data1"] = ...
+        self.state.EX["Read_data2"] = ...
+        self.state.EX["Imm"] = ...
+        self.state.EX["Rs"] = ...
+        self.state.EX["Rt"] = ...
+        self.state.EX["Wrt_reg_addr"] = ...
+        self.state.EX["is_I_type"] = ...
+        self.state.EX["rd_mem"] = ...
+        self.state.EX["wrt_mem"] = ...
+        self.state.EX["alu_op"] = ...
+        self.state.EX["wrt_enable"] = ...
 
         # --------------------- EX stage ---------------------
 
