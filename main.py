@@ -1,4 +1,4 @@
-from src.NYU_RV32I_6913 import InsMem, DataMem, SingleStageCore, FiveStageCore
+from src.NYU_RV32I_6913 import InstructionMemory, DataMemory, SingleStageCore, FiveStageCore
 import os
 import argparse
 from pathlib import Path
@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     # parse arguments for input file location
     parser = argparse.ArgumentParser(description='RV32I processor')
-    parser.add_argument('--iodir', default="input", type=str, help='Directory containing the input files.')
+    parser.add_argument('--iodir', default="iodir", type=str, help='Directory containing the input files.')
     args = parser.parse_args()
 
     ioDir = Path(args.iodir)
@@ -15,9 +15,9 @@ if __name__ == "__main__":
 
     print("List IO Directory:", list(ioDir.iterdir()))
 
-    imem = InsMem("Imem", ioDir)
-    dmem_ss = DataMem("SS", ioDir)
-    dmem_fs = DataMem("FS", ioDir)
+    imem = InstructionMemory("Imem", ioDir)
+    dmem_ss = DataMemory("SS", ioDir)
+    dmem_fs = DataMemory("FS", ioDir)
 
     ssCore = SingleStageCore(ioDir, imem, dmem_ss)
     fsCore = FiveStageCore(ioDir, imem, dmem_fs)
@@ -33,5 +33,5 @@ if __name__ == "__main__":
             break
 
     # dump SS and FS data mem.
-    dmem_ss.outputDataMem()
-    dmem_fs.outputDataMem()
+    dmem_ss.output_data_memory()
+    dmem_fs.output_data_memory()
