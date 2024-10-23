@@ -32,6 +32,7 @@ class InstructionMemory(object):
         """
 
         # load 4 piece of data and concatenate them
+        # todo: should return in hex
         return ''.join(self.i_mem[read_address: read_address+4])
 
 
@@ -63,6 +64,7 @@ class DataMemory(object):
         Returns:
             str: The 32-bit data in binary format.
         """
+        # todo: should return in hex
         return ''.join(self.d_mem[read_address: read_address+4])
 
     def write_data_memory(self, address, write_data):

@@ -26,7 +26,7 @@ class RegisterFile(object):
         Read the data from the register file.
 
         Args:
-            reg_addr (int): The address of the register to read from.
+            reg_addr (int): The address of the register to read from. (0~31)
 
         Returns:
             int: The data read from the register.
@@ -39,7 +39,7 @@ class RegisterFile(object):
         Write data to the register file.
 
         Args:
-            reg_addr (int): The address of the register to write to.
+            reg_addr (int): The address of the register to write to. (0~31)
             write_reg_data (int): The data to write to the register.
         """
         # Fill in

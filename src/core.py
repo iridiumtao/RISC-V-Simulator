@@ -57,7 +57,9 @@ class SingleStageCore(Core):
         self.myRF.outputRF(self.cycle)  # dump RF
         self.print_state(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
-        self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
+        # The end of the cycle
+        # and updates the current state with the values calculated in this cycle
+        self.state = self.nextState
         self.cycle += 1
 
     def print_state(self, state, cycle):
