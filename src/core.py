@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.register import RegisterFile
+from src.register_file import RegisterFile
 from src.state import State
 
 class Core(object):
@@ -7,6 +7,8 @@ class Core(object):
         self.myRF = RegisterFile(ioDir)
         self.cycle = 0
         self.halted = False
+        """ A flag to indicate STOP """
+
         self.ioDir = ioDir
         self.state = State()
         self.nextState = State()
@@ -15,11 +17,26 @@ class Core(object):
 
 
 class SingleStageCore(Core):
+    """
+    SingleStageCore simulates a single-stage pipeline processor core.
+    """
+
     def __init__(self, io_dir, instruction_memory, data_memory):
+        """
+        Initialize the SingleStageCore.
+
+        Args:
+            io_dir (Path): Directory for input/output files.
+            instruction_memory (InstructionMemory): The instruction memory.
+            data_memory (DataMemory): The data memory.
+        """
         super(SingleStageCore, self).__init__(io_dir / "SS_", instruction_memory, data_memory)
         self.op_file_path = io_dir / "StateResult_SS.txt"
 
     def step(self):
+        """
+        Execute one cycle of the processor.
+        """
         # Your implementation
 
         self.halted = True
@@ -27,12 +44,19 @@ class SingleStageCore(Core):
             self.halted = True
 
         self.myRF.outputRF(self.cycle)  # dump RF
-        self.printState(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
+        self.print_state(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
-        self.state = self.nextState  #The end of the cycle and updates the current state with the values calculated in this cycle
+        self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
         self.cycle += 1
 
-    def printState(self, state, cycle):
+    def print_state(self, state, cycle):
+        """
+        Print the state of the processor after each cycle.
+
+        Args:
+            state (State): The current state of the processor.
+            cycle (int): The current cycle number.
+        """
         printstate = ["-" * 70 + "\n", "State after executing cycle: " + str(cycle) + "\n"]
         printstate.append("IF.PC: " + str(state.IF["PC"]) + "\n")
         printstate.append("IF.nop: " + str(state.IF["nop"]) + "\n")
