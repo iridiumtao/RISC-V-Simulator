@@ -1,7 +1,7 @@
 import os
 import argparse
 
-MemSize = 1000 # memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
+MemSize = 1000 # memory.py size, in reality, the memory.py size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory.py is still 32-bit addressable.
 
 class InsMem(object):
     def __init__(self, name, ioDir):
@@ -11,7 +11,7 @@ class InsMem(object):
             self.IMem = [data.replace("\n", "") for data in im.readlines()]
 
     def readInstr(self, ReadAddress):
-        #read instruction memory
+        #read instruction memory.py
         #return 32 bit hex val
         pass
           
@@ -23,12 +23,12 @@ class DataMem(object):
             self.DMem = [data.replace("\n", "") for data in dm.readlines()]
 
     def readInstr(self, ReadAddress):
-        #read data memory
+        #read data memory.py
         #return 32 bit hex val
         pass
         
     def writeDataMem(self, Address, WriteData):
-        # write data into byte addressable memory
+        # write data into byte addressable memory.py
         pass
                      
     def outputDataMem(self):

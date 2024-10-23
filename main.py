@@ -1,7 +1,7 @@
-from src.NYU_RV32I_6913 import InstructionMemory, DataMemory, SingleStageCore, FiveStageCore
-import os
 import argparse
 from pathlib import Path
+from src.memory import InstructionMemory, DataMemory
+from src.core import SingleStageCore, FiveStageCore
 
 if __name__ == "__main__":
 
