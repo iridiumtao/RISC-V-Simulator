@@ -43,7 +43,7 @@ class RTypeDecoder(InstructionDecoder):
         super().__init__(raw_data)
 
     def decode(self):
-        rd = (self.raw_data >> 7) & 0x1F  # bits [11:7]
+        rd = (self.raw_data >> 7) & 0x1F  # bits [11:7] & 0b1_1111
         funct3 = (self.raw_data >> 12) & 0x7  # bits [14:12]
         rs1 = (self.raw_data >> 15) & 0x1F  # bits [19:15]
         rs2 = (self.raw_data >> 20) & 0x1F  # bits [24:20]
@@ -56,4 +56,117 @@ class RTypeDecoder(InstructionDecoder):
             "rs2": rs2,
             "funct3": funct3,
             "funct7": funct7
+        }
+
+
+class ITypeDecoder(InstructionDecoder):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def decode(self):
+        rd = (self.raw_data >> 7) & 0x1F  # bits [11:7]
+        funct3 = (self.raw_data >> 12) & 0x7  # bits [14:12]
+        rs1 = (self.raw_data >> 15) & 0x1F  # bits [19:15]
+        imm = (self.raw_data >> 20) & 0xFFF  # bits [31:20], 12-bit immediate
+
+        # Sign extension for immediate (if necessary)
+        if imm & 0x800:
+            imm |= ~0xFFF  # If sign bit is set, extend to 32 bits
+
+        return {
+            "opcode": self.opcode,
+            "rd": rd,
+            "rs1": rs1,
+            "funct3": funct3,
+            "imm": imm
+        }
+
+
+class STypeDecoder(InstructionDecoder):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def decode(self):
+        imm4_0 = (self.raw_data >> 7) & 0x1F  # bits [11:7]
+        funct3 = (self.raw_data >> 12) & 0x7  # bits [14:12]
+        rs1 = (self.raw_data >> 15) & 0x1F  # bits [19:15]
+        rs2 = (self.raw_data >> 20) & 0x1F  # bits [24:20]
+        imm11_5 = (self.raw_data >> 25) & 0x7F  # bits [31:25]
+        imm = (imm11_5 << 5) | imm4_0  # Combine immediate fields
+
+        # Sign extension for immediate (if necessary)
+        if imm & 0x800:
+            imm |= ~0xFFF  # If sign bit is set, extend to 32 bits
+
+        return {
+            "opcode": self.opcode,
+            "rs1": rs1,
+            "rs2": rs2,
+            "funct3": funct3,
+            "imm": imm
+        }
+
+
+class BTypeDecoder(InstructionDecoder):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def decode(self):
+        imm11 = (self.raw_data >> 7) & 0x1  # bit [11]
+        imm4_1 = (self.raw_data >> 8) & 0xF  # bits [10:8, 4:1]
+        funct3 = (self.raw_data >> 12) & 0x7  # bits [14:12]
+        rs1 = (self.raw_data >> 15) & 0x1F  # bits [19:15]
+        rs2 = (self.raw_data >> 20) & 0x1F  # bits [24:20]
+        imm10_5 = (self.raw_data >> 25) & 0x3F  # bits [30:25]
+        imm12 = (self.raw_data >> 31) & 0x1  # bit [31]
+        imm = (imm12 << 12) | (imm11 << 11) | (imm10_5 << 5) | (imm4_1 << 1)  # Combine immediate fields
+
+        # Sign extension for immediate (if necessary)
+        if imm & 0x1000:
+            imm |= ~0x1FFF  # If sign bit is set, extend to 32 bits
+
+        return {
+            "opcode": self.opcode,
+            "rs1": rs1,
+            "rs2": rs2,
+            "funct3": funct3,
+            "imm": imm
+        }
+
+
+class UTypeDecoder(InstructionDecoder):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def decode(self):
+        rd = (self.raw_data >> 7) & 0x1F  # bits [11:7]
+        imm = self.raw_data & 0xFFFFF000  # bits [31:12], 20-bit immediate
+        return {
+            "opcode": self.opcode,
+            "rd": rd,
+            "imm": imm
+        }
+
+
+# J-Type Decoder
+class JTypeDecoder(InstructionDecoder):
+    def __init__(self, raw_data):
+        super().__init__(raw_data)
+
+    def decode(self):
+        rd = (self.raw_data >> 7) & 0x1F  # bits [11:7]
+        imm19_12 = (self.raw_data >> 12) & 0xFF  # bits [19:12]
+        imm11 = (self.raw_data >> 20) & 0x1  # bit [11]
+        imm10_1 = (self.raw_data >> 21) & 0x3FF  # bits [10:1]
+        imm20 = (self.raw_data >> 31) & 0x1  # bit [20]
+        imm = (imm20 << 20) | (imm19_12 << 12) | (imm11 << 11) | (imm10_1 << 1)  # Combine immediate fields
+
+        # Sign extension for immediate (if necessary)
+        if imm & 0x100000:
+            imm |= ~0x1FFFFF  # If sign bit is set, extend to 32 bits
+
+        return {
+            "opcode": self.opcode,
+            "rd": rd,
+            "imm": imm
         }
