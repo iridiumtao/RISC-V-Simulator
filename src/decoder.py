@@ -3,7 +3,7 @@ from src.instructions import *
 
 class Decoder:
     def __init__(self, raw_data):
-        self.raw_data = raw_data
+        self.raw_data = int.from_bytes(raw_data.to_bytes(4, byteorder='big'), byteorder='little')
 
 
 class InstructionDecoder(Decoder):

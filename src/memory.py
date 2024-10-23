@@ -20,7 +20,7 @@ class InstructionMemory(object):
         with open(io_dir / "imem.txt") as im:
             self.i_mem = [data.replace("\n", "") for data in im.readlines()]
 
-    def read_instruction(self, read_address: int) -> str:
+    def read_instruction(self, read_address: int) -> int:
         """
         Read an instruction from the instruction memory.
 
@@ -28,12 +28,12 @@ class InstructionMemory(object):
             read_address (int): The address to read the instruction from.
 
         Returns:
-            str: The 32-bit instruction in binary format.
+            int: The 32-bit instruction. can be print as hex: f'{address:#x}, bin: f'{address:#b}'
         """
 
         # load 4 piece of data and concatenate them
-        # todo: should return in hex
-        return ''.join(self.i_mem[read_address: read_address+4])
+        bin_str = ''.join(self.i_mem[read_address: read_address+4])
+        return int(bin_str, 2)
 
 
 class DataMemory(object):
@@ -64,8 +64,8 @@ class DataMemory(object):
         Returns:
             str: The 32-bit data in binary format.
         """
-        # todo: should return in hex
-        return ''.join(self.d_mem[read_address: read_address+4])
+        bin_str = ''.join(self.d_mem[read_address: read_address + 4])
+        return int(bin_str, 2)
 
     def write_data_memory(self, address, write_data):
         """
