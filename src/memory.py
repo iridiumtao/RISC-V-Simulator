@@ -16,10 +16,11 @@ class InstructionMemory(object):
         """
         self.id = name
 
+        # Each line in the files contain a byte of data
         with open(io_dir / "imem.txt") as im:
-            self.IMem = [data.replace("\n", "") for data in im.readlines()]
+            self.i_mem = [data.replace("\n", "") for data in im.readlines()]
 
-    def read_instruction(self, read_address):
+    def read_instruction(self, read_address: int) -> str:
         """
         Read an instruction from the instruction memory.
 
@@ -27,9 +28,11 @@ class InstructionMemory(object):
             read_address (int): The address to read the instruction from.
 
         Returns:
-            str: The 32-bit instruction in hexadecimal format.
+            str: The 32-bit instruction in binary format.
         """
-        pass
+
+        # load 4 piece of data and concatenate them
+        return ''.join(self.i_mem[read_address: read_address+4])
 
 
 class DataMemory(object):
@@ -48,7 +51,7 @@ class DataMemory(object):
         self.id = name
         self.ioDir = io_dir
         with open(io_dir / "dmem.txt") as dm:
-            self.DMem = [data.replace("\n", "") for data in dm.readlines()]
+            self.d_mem = [data.replace("\n", "") for data in dm.readlines()]
 
     def read_instruction(self, read_address):
         """
@@ -58,9 +61,9 @@ class DataMemory(object):
             read_address (int): The address to read the data from.
 
         Returns:
-            str: The 32-bit data in hexadecimal format.
+            str: The 32-bit data in binary format.
         """
-        pass
+        return ''.join(self.d_mem[read_address: read_address+4])
 
     def write_data_memory(self, address, write_data):
         """
@@ -68,7 +71,7 @@ class DataMemory(object):
 
         Args:
             address (int): The address to write the data to.
-            write_data (str): The data to write in hexadecimal format.
+            write_data (???): The data to write in ??? format.
         """
         pass
 
@@ -78,4 +81,4 @@ class DataMemory(object):
         """
         res_path = self.ioDir / f"{self.id}_DMEMResult.txt"
         with open(res_path, "w") as rp:
-            rp.writelines([str(data) + "\n" for data in self.DMem])
+            rp.writelines([str(data) + "\n" for data in self.d_mem])

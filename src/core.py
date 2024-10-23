@@ -2,6 +2,7 @@ from pathlib import Path
 from src.register_file import RegisterFile
 from src.state import State
 
+
 class Core(object):
     def __init__(self, ioDir, instruction_memory, data_memory):
         self.myRF = RegisterFile(ioDir)
@@ -38,6 +39,16 @@ class SingleStageCore(Core):
         Execute one cycle of the processor.
         """
         # Your implementation
+
+        # --------------------- IF stage ---------------------
+
+        # --------------------- ID stage ---------------------
+
+        # --------------------- EX stage ---------------------
+
+        # --------------------- MEM stage --------------------
+
+        # --------------------- WB stage ---------------------
 
         self.halted = True
         if self.state.IF["nop"]:
