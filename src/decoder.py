@@ -1,44 +1,64 @@
 from src.instructions import *
+from loguru import logger
 
 
 class Decoder:
     def __init__(self, raw_data):
-        self.raw_data = int.from_bytes(raw_data.to_bytes(4, byteorder='big'), byteorder='little')
+        # self.raw_data = int.from_bytes(raw_data.to_bytes(4, byteorder='big'), byteorder='little')
+        self.raw_data = raw_data
+
+    def decode(self):
+        raise NotImplementedError("Decode method must be implemented by subclasses")
 
 
 class InstructionDecoder(Decoder):
     opcode = None
 
+    decoder = None
+
     def __init__(self, raw_data):
-        super().__init__(raw_data)
-        self.opcode = self.extract_opcode()
-        pass
+        self.raw_data = raw_data
+        # extract least 7 bit as opcode
+        self.opcode = self.raw_data & 0x7F
+        logger.debug(f"Opcode: {self.opcode}")
+
+        self.decoder = self._create_decoder()
+
 
     def extract_opcode(self):
         """ extract least 7 bit as opcode """
         return self.raw_data & 0x7F
 
-    def decode(self):
+    def _create_decoder(self):
         match self.opcode:
             case 0b0110011:
-                return RTypeDecoder(self.raw_data).decode()
+                return RTypeDecoder(self.raw_data)
             case 0b0010011:
-                return ITypeDecoder(self.raw_data).decode()
+                return ITypeDecoder(self.raw_data)
+            case 0b0000011: # lw, sw
+                return ITypeDecoder(self.raw_data)
             case 0b0100011:
-                return STypeDecoder(self.raw_data).decode()
-
+                return STypeDecoder(self.raw_data)
             case 0b1100011:
-                return BTypeDecoder(self.raw_data).decode()
+                return BTypeDecoder(self.raw_data)
             case 0b0000000:  # unused
-                return UTypeDecoder(self.raw_data).decode()
+                return UTypeDecoder(self.raw_data)
             case 0b1101111:
-                return JTypeDecoder(self.raw_data).decode()
+                return JTypeDecoder(self.raw_data)
+            case None:
+                raise ValueError("Opcode is None")
             case _:
-                raise ValueError("Unknown opcode")
-        pass
+                logger.error(f"Opcode {self.opcode} is not supported.")
+
+    def decode(self):
+        if self.decoder is None:
+            raise ValueError("Decoder is not properly set.")
+        return self.decoder.decode()
 
 
-class RTypeDecoder(InstructionDecoder):
+
+
+class RTypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
@@ -50,7 +70,7 @@ class RTypeDecoder(InstructionDecoder):
         funct7 = (self.raw_data >> 25) & 0x7F  # bits [31:25]
 
         return {
-            "opcode": self.opcode,
+            "opcode": 0b0110011,
             "rd": rd,
             "rs1": rs1,
             "rs2": rs2,
@@ -58,12 +78,16 @@ class RTypeDecoder(InstructionDecoder):
             "funct7": funct7
         }
 
+    def print_formatted_instruction(instuction: int):
+        pass
 
-class ITypeDecoder(InstructionDecoder):
+
+class ITypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
     def decode(self):
+        opcode = self.raw_data & 0x7F
         rd = (self.raw_data >> 7) & 0x1F  # bits [11:7]
         funct3 = (self.raw_data >> 12) & 0x7  # bits [14:12]
         rs1 = (self.raw_data >> 15) & 0x1F  # bits [19:15]
@@ -74,15 +98,16 @@ class ITypeDecoder(InstructionDecoder):
             imm |= ~0xFFF  # If sign bit is set, extend to 32 bits
 
         return {
-            "opcode": self.opcode,
+            "opcode": opcode,
             "rd": rd,
             "rs1": rs1,
             "funct3": funct3,
             "imm": imm
         }
 
+## below need modification
 
-class STypeDecoder(InstructionDecoder):
+class STypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
@@ -107,7 +132,7 @@ class STypeDecoder(InstructionDecoder):
         }
 
 
-class BTypeDecoder(InstructionDecoder):
+class BTypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
@@ -134,7 +159,7 @@ class BTypeDecoder(InstructionDecoder):
         }
 
 
-class UTypeDecoder(InstructionDecoder):
+class UTypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 
@@ -149,7 +174,7 @@ class UTypeDecoder(InstructionDecoder):
 
 
 # J-Type Decoder
-class JTypeDecoder(InstructionDecoder):
+class JTypeDecoder(Decoder):
     def __init__(self, raw_data):
         super().__init__(raw_data)
 

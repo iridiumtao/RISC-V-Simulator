@@ -1,3 +1,4 @@
+from loguru import logger
 from pathlib import Path
 
 from src.decoder import InstructionDecoder
@@ -47,27 +48,32 @@ class SingleStageCore(Core):
 
         new_inst_addr = self.state.IF["PC"]
         self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(new_inst_addr)
+        logger.debug(f"Instruction: {self.state.ID['Instr']}")
         PC_next = new_inst_addr + 4
         self.state.IF["PC"] = PC_next
 
+        inst_decoder = InstructionDecoder(self.state.ID["Instr"])
+        inst_memory = inst_decoder.decode()
+
         # --------------------- ID stage ---------------------
 
-        # todo: decode the instruction
+        print(inst_memory)
 
-        inst_decoder = InstructionDecoder(self.state.ID["Instr"])
-        inst_decoder.decode()
 
-        self.state.EX["Read_data1"] = ...
-        self.state.EX["Read_data2"] = ...
-        self.state.EX["Imm"] = ...
+        self.state.EX["Read_data1"] = inst_memory.get("rs1")
+        self.state.EX["Read_data2"] = inst_memory.get("rs2")
+        self.state.EX["Wrt_reg_addr"] = inst_memory.get("rd")
+
         self.state.EX["Rs"] = ...
         self.state.EX["Rt"] = ...
-        self.state.EX["Wrt_reg_addr"] = ...
         self.state.EX["is_I_type"] = ...
         self.state.EX["rd_mem"] = ...
         self.state.EX["wrt_mem"] = ...
         self.state.EX["alu_op"] = ...
         self.state.EX["wrt_enable"] = ...
+
+        self.state.EX["Imm"] = ...
+
 
         # --------------------- EX stage ---------------------
 
