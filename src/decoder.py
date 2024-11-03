@@ -1,7 +1,7 @@
 from src.instructions import *
 from loguru import logger
 
-
+# todo: these should be moved into register_file.py
 class Decoder:
     def __init__(self, raw_data):
         # self.raw_data = int.from_bytes(raw_data.to_bytes(4, byteorder='big'), byteorder='little')

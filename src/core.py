@@ -5,6 +5,7 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
+from src.components import alu, alu_control, adder
 
 
 class Core(object):
@@ -45,15 +46,24 @@ class SingleStageCore(Core):
         # Your implementation
 
         # --------------------- IF stage ---------------------
+        logger.debug(f"--------------------- IF stage ---------------------")
 
-        new_inst_addr = self.state.IF["PC"]
-        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(new_inst_addr)
+        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(self.state.IF["PC"])
         logger.debug(f"Instruction: {self.state.ID['Instr']}")
-        PC_next = new_inst_addr + 4
-        self.state.IF["PC"] = PC_next
+
+        # TODO: Temporarily. I'll figure out if this is correct
+        # "The PC address is incremented by 4 and then written
+        # back into the PC to be ready for the next clock cycle. This PC is also saved
+        # in the IF/ID pipeline register in case it is needed later for an instruction,
+        # such as beq." Comp.Org P.300
+        self.state.IF["PC"] = adder(self.state.IF["PC"], 4)
+        logger.debug(f"PC: {self.state.IF['PC']}")
+
 
         inst_decoder = InstructionDecoder(self.state.ID["Instr"])
         inst_memory = inst_decoder.decode()
+
+
 
         # --------------------- ID stage ---------------------
 
@@ -76,6 +86,16 @@ class SingleStageCore(Core):
 
 
         # --------------------- EX stage ---------------------
+
+        # todo
+        # ALUOp 2-bit, generated from the Main Control Unit
+        # indicates whether the operation to be performed should be
+        # add (00) for loads and stores, subtract and
+        # test if zero (01) for beq, or
+        # be determined by the operation encoded in the funct7 and funct3 fields (10).
+
+        # todo
+        # ALU control 4-bit
 
         # --------------------- MEM stage --------------------
 

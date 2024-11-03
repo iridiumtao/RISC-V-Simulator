@@ -7,9 +7,9 @@ class State(object):
         """
 
         self.ID = {"nop": False, "Instr": 0}
-        """ Convert the 32 bits into an instruction. (Big endian)
+        """ Corresponding IF/ID Pipeline register
                  
-        { nop: No Operation, Instr: Instruction }"""
+        { nop: No Operation, Instr: 32 bit binary Instruction stores in int}"""
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
