@@ -5,7 +5,7 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
-from src.components import alu, alu_control, adder
+from src.components import alu, alu_control, adder, control_unit, imm_gen
 
 
 class Core(object):
@@ -60,31 +60,31 @@ class SingleStageCore(Core):
         logger.debug(f"PC: {self.state.IF['PC']}")
 
 
-        inst_decoder = InstructionDecoder(self.state.ID["Instr"])
-        inst_memory = inst_decoder.decode()
-
 
 
         # --------------------- ID stage ---------------------
 
-        print(inst_memory)
+        # See comments in state.py to see more information
+        self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F # bits [19:15]
+        self.state.EX["Rt"] = (self.state.ID["Instr"] >> 20) & 0x1F  # bits [24:20]
+        self.state.EX["Wrt_reg_addr"] = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
+
+        # Ref: Comp.Org P.282.e5 Figure e4.5.4
+        self.state.EX["Read_data1"] = self.register_file.read(self.state.EX["Rs"])
+        self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
 
 
-        self.state.EX["Read_data1"] = inst_memory.get("rs1")
-        self.state.EX["Read_data2"] = inst_memory.get("rs2")
-        self.state.EX["Wrt_reg_addr"] = inst_memory.get("rd")
+        opcode = self.state.ID["Instr"] & 0x7F
+        self.state.EX["Imm"] = imm_gen(opcode=opcode, instruction=self.state.ID["Instr"])
 
-        self.state.EX["Rs"] = ...
-        self.state.EX["Rt"] = ...
-        self.state.EX["is_I_type"] = ...
-        self.state.EX["rd_mem"] = ...
-        self.state.EX["wrt_mem"] = ...
-        self.state.EX["alu_op"] = ...
-        self.state.EX["wrt_enable"] = ...
+        control_signals = control_unit(opcode)
+        self.state.EX["wrt_enable"] = control_signals["RegWrite"]
+        self.state.EX["is_I_type"] = control_signals["ALUSrc"]
+        self.state.EX["rd_mem"] = control_signals["MemRead"]
+        self.state.EX["alu_op"] = control_signals["ALUOp"]
+        self.state.EX["wrt_mem"] = control_signals["MemWrite"]
 
-        self.state.EX["Imm"] = ...
-
-
+        # todo: PCSrc, MemtoReg should also be set in this stage, not found in state machine
         # --------------------- EX stage ---------------------
 
         # todo
@@ -105,7 +105,7 @@ class SingleStageCore(Core):
         if self.state.IF["nop"]:
             self.halted = True
 
-        self.register_file.outputRF(self.cycle)  # dump RF
+        self.register_file.output(self.cycle)  # dump RF
         self.print_state(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
         # The end of the cycle
@@ -155,7 +155,7 @@ class FiveStageCore(Core):
                 self.state.WB["nop"]:
             self.halted = True
 
-        self.register_file.outputRF(self.cycle)  # dump RF
+        self.register_file.output(self.cycle)  # dump RF
         self.printState(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
         self.state = self.nextState  #The end of the cycle and updates the current state with the values calculated in this cycle
