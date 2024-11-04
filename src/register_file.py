@@ -21,7 +21,7 @@ class RegisterFile(object):
         self.outputFile = io_dir / "RFResult.txt"
         self.Registers = [0x0 for i in range(32)]
 
-    def readRF(self, reg_addr):
+    def read(self, reg_addr):
         """
         Read the data from the register file.
 
@@ -34,7 +34,7 @@ class RegisterFile(object):
         # Fill in
         pass
 
-    def writeRF(self, reg_addr, write_reg_data):
+    def write(self, reg_addr, write_reg_data):
         """
         Write data to the register file.
 
@@ -45,7 +45,7 @@ class RegisterFile(object):
         # Fill in
         pass
 
-    def outputRF(self, cycle):
+    def output(self, cycle):
         """
         Output the state of the register file to a file.
 
