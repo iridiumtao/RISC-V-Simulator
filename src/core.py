@@ -9,7 +9,10 @@ from src.components import arithmetic_logic_unit, alu_control_unit, adder, contr
 
 
 class Core(object):
-    def __init__(self, ioDir, instruction_memory: InstructionMemory, data_memory: DataMemory):
+    def __init__(self,
+                 ioDir,
+                 instruction_memory: InstructionMemory,
+                 data_memory: DataMemory):
         self.register_file = RegisterFile(ioDir)
         self.cycle = 0
         self.halted = False
@@ -56,10 +59,12 @@ class SingleStageCore(Core):
         if_PC_adder_result = adder(4, self.state.IF["PC"])
         logger.debug(f"PC: {self.state.IF['PC']}")
 
-        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(self.state.IF["PC"])
-        logger.debug(f"Instruction: {self.state.ID['Instr']}")
+        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
+            self.state.IF["PC"])
+        logger.debug(f"Instruction: {self.state.ID['Instr']:032b}")
 
         # --------------------- ID stage ---------------------
+        logger.debug(f"--------------------- ID stage ---------------------")
 
         # See comments in state.py to see more information
         self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F  # bits [19:15]
@@ -71,23 +76,30 @@ class SingleStageCore(Core):
         self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
 
         opcode = self.state.ID["Instr"] & 0x7F
+        logger.debug(f"Opcode: {opcode:07b}")
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
 
         control_signals = control_unit(opcode)
-        self.state.EX["alu_op"] = control_signals["ALUOp"] # EX stage
-        self.state.EX["is_I_type"] = control_signals["ALUSrc"] # EX stage
+        logger.debug(f"Control Signals: {control_signals}")
+        self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
+        self.state.EX["is_I_type"] = control_signals["ALUSrc"]  # EX stage
 
         # todo: maybe in control signals "Branch" should be renamed to "PCSrc"?
-        pc_src = control_signals["Branch"] # MEM stage, but not found for Single Stage Machine
-        self.state.EX["rd_mem"] = control_signals["MemRead"] # MEM stage
-        self.state.EX["wrt_mem"] = control_signals["MemWrite"] # MEM stage
+        pc_src = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
+        self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
+        self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
 
-        mem_to_reg = control_signals["MemtoReg"] # WB stage, but not found for Single Stage Machine
-        self.state.EX["wrt_enable"] = control_signals["RegWrite"] # WB stage
-
+        mem_to_reg = control_signals["MemtoReg"]  # WB stage, but not found for Single Stage Machine
+        self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
         # todo: Branch/PCSrc, MemtoReg should also be set in this stage, not found in state machine
+
+        func7_bit = (self.state.ID["Instr"] >> 30) & 0b1
+        func3 = (self.state.ID["Instr"] >> 12) & 0b111
+        alu_control_func_code = (func7_bit << 3) | func3
+
         # --------------------- EX stage ---------------------
+        logger.debug(f"--------------------- EX stage ---------------------")
 
         self.state.MEM["Rs"] = self.state.EX["Rs"]
         self.state.MEM["Rt"] = self.state.EX["Rt"]
@@ -103,14 +115,15 @@ class SingleStageCore(Core):
 
         alu_input_b = multiplexer(self.state.EX["Read_data2"],
                                   self.state.EX["Imm"],
-                                  self.state.EX["is_I_type"] & 1) # extract the least significant bit
+                                  self.state.EX["is_I_type"] & 1)  # extract the least significant bit
 
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
         # add (00) for loads and stores, subtract and
         # test if zero (01) for beq, or
         # be determined by the operation encoded in the funct7 and funct3 fields (10).
-        alu_control = alu_control_unit(self.state.EX["alu_op"], self.state.EX["is_I_type"])
+        alu_control = alu_control_unit(self.state.EX["alu_op"],
+                                       alu_control_func_code)
 
         # ALU control 4-bit
         zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
@@ -119,6 +132,7 @@ class SingleStageCore(Core):
             b=alu_input_b)
 
         # --------------------- MEM stage --------------------
+        logger.debug(f"--------------------- MEM stage ---------------------")
 
         # todo: not sure what to do
         self.state.WB["Wrt_data"] = self.state.MEM["ALUresult"]
@@ -130,20 +144,20 @@ class SingleStageCore(Core):
         self.state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
 
         if self.state.MEM["wrt_mem"] == 1:
-            self.ext_data_memory.write_data_memory(self.state.EX["Read_data2"], self.state.MEM["ALUresult"])
-        data = None # not found in state machine
+            self.ext_data_memory.write_data_memory(
+                self.state.EX["Read_data2"],
+                self.state.MEM["ALUresult"])
+        data = None  # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
             data = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
 
         # --------------------- WB stage ---------------------
+        logger.debug(f"--------------------- WB stage ---------------------")
 
         self.state.WB["Wrt_data"] = multiplexer(data, self.state.WB["Wrt_data"], mem_to_reg)
 
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
-
-
-
 
         self.halted = True
         if self.state.IF["nop"]:

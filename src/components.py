@@ -1,24 +1,48 @@
+from loguru import logger
+
 def alu_control_unit(alu_op, func_code):
-    """ALU Control logic to determine the ALU operation code based on ALUOp and FuncCode.
+    """ALU Control logic for RISC-V simulator.
 
-    ALU control define reference Comp.Org p.A-37"""
+    Determines the ALU operation based on ALUOp, Func3, and Func7 fields.
 
-    # Initialize alu_control to default value
-    alu_control = 15  # Default case, should not happen
+    `func_code` parameter should be derived as `Instruction[30, 14-12]` in the main code.
 
-    # Determine alu_control based on FuncCode and ALUOp values
-    if alu_op == 2:
-        if func_code == 32:
-            alu_control = 2  # Add
-        elif func_code == 34:
-            alu_control = 6  # Subtract
-        elif func_code == 36:
-            alu_control = 0  # AND
-        elif func_code == 37:
-            alu_control = 1  # OR
+    **ALU control define reference Comp.Org p.A-37 is WRONG**
+
+    :param alu_op:
+        `00`: Load/store (add operation),
+        `01`: Branch (subtract operation),
+        `10`: R-type, with operation determined by `func_code` input.
+
+    :param func_code: combination of Instr[30, 14:12] with `func_code` = (Func7Bit << 3) | Func3
+    :return: alu_control: 4-bit ALU control signal
+    """
+
+    if alu_op == 0b00:
+        alu_control = 0b0010  # add for lw/sw
+        logger.debug(f"ALU Control: {alu_control} (Load/Store)")
+    elif alu_op == 0b01:
+        alu_control = 0b0110  # subtract for branch
+        logger.debug(f"ALU Control: {alu_control} (Branch)")
+    elif alu_op == 0b10:
+        if func_code == 0b0000:
+            alu_control = 0b0010  # ADD
+            logger.debug(f"ALU Control: {alu_control} (ADD)")
+        elif func_code == 0b1000:
+            alu_control = 0b0110  # SUB
+            logger.debug(f"ALU Control: {alu_control} (SUB)")
+        elif func_code == 0b0111:
+            alu_control = 0b0000  # AND
+            logger.debug(f"ALU Control: {alu_control} (AND)")
+        elif func_code == 0b0110:
+            alu_control = 0b0001  # OR
+            logger.debug(f"ALU Control: {alu_control} (OR)")
         else:
-            alu_control = 15  # Default case, should not happen
-
+            alu_control = 0b1111  # Should not happen
+            logger.error(f"ALU Control: {alu_control} (Undefined)")
+    else:
+        alu_control = 0b1111  # Undefined behavior
+        logger.error(f"ALU Control: {alu_control} (Undefined)")
     return alu_control
 
 
@@ -43,6 +67,8 @@ def arithmetic_logic_unit(alu_control, a, b):
 
     # Zero is True if alu_result is 0
     zero = (alu_result == 0)
+
+    logger.debug(f"ALU Result: {alu_result}, Zero: {zero}")
 
     return zero, alu_result
 

@@ -17,12 +17,6 @@ if __name__ == "__main__":
 
     imem = InstructionMemory("Imem", ioDir)
 
-
-    k = imem.read_instruction(1)
-    print(k)
-
-
-
     dmem_ss = DataMemory("SS", ioDir)
     dmem_fs = DataMemory("FS", ioDir)
 
