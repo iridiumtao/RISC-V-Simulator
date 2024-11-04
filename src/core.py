@@ -77,18 +77,18 @@ class SingleStageCore(Core):
         self.state.EX["alu_op"] = control_signals["ALUOp"] # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrc"] # EX stage
 
-        # Branch # MEM stage
+        # todo: maybe in control signals "Branch" should be renamed to "PCSrc"?
+        pc_src = control_signals["Branch"] # MEM stage, but not found for Single Stage Machine
         self.state.EX["rd_mem"] = control_signals["MemRead"] # MEM stage
         self.state.EX["wrt_mem"] = control_signals["MemWrite"] # MEM stage
 
-        # MemtoReg # WB stage
+        mem_to_reg = control_signals["MemtoReg"] # WB stage, but not found for Single Stage Machine
         self.state.EX["wrt_enable"] = control_signals["RegWrite"] # WB stage
 
 
         # todo: Branch/PCSrc, MemtoReg should also be set in this stage, not found in state machine
         # --------------------- EX stage ---------------------
 
-        # todo: not sure what to do
         self.state.MEM["Rs"] = self.state.EX["Rs"]
         self.state.MEM["Rt"] = self.state.EX["Rt"]
         self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
@@ -131,17 +131,16 @@ class SingleStageCore(Core):
 
         if self.state.MEM["wrt_mem"] == 1:
             self.ext_data_memory.write_data_memory(self.state.EX["Read_data2"], self.state.MEM["ALUresult"])
+        data = None # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
-            # todo define read_data_memory?
-            self.state.WB["??"] = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+            data = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
 
         # --------------------- WB stage ---------------------
 
-        # todo define MemtoReg?
-        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["???"], self.state.WB["Wrt_data"], mem_to_reg)
-        # todo: finish WB stage p.300 bottom
+        self.state.WB["Wrt_data"] = multiplexer(data, self.state.WB["Wrt_data"], mem_to_reg)
 
-
+        if self.state.WB["wrt_enable"] == 1:
+            self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 
 
 

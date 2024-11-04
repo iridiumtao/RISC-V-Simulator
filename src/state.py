@@ -52,7 +52,24 @@ class State(object):
         
         "Memory access: The control lines set in this stage are Branch, MemRead, and MemWrite. The branch if equal, load, and store instructions set these signals, respectively. Recall that PCSrc in Figure 4.50 selects the next sequential address unless control asserts Branch and the ALU result was 0." Comp.Org P.331
                 
-        { nop: No Operation }"""
+        { nop: No Operation, 
+        
+          Rs: ID Register input: rs1, 
+          Rt: ID Register input: rs2,
+          Wrt_reg_addr: ID Register input: Write register,
+          
+          ALUresult: ALU output,
+          Store_data: (*maybe*) ID Register output: Read register 2 (rd2),
+          
+          Imm: Imm Gen output, 
+          
+          alu_op: 2 bits Control line output: ALUOp (connect to ALU control),
+          is_I_type: 2 bits Control unit output: ALUSrc, 
+
+          rd_mem: 1 bit Control unit output: MemRead, 
+          wrt_mem: 1 bit Control unit output: MemWrite,
+          
+          wrt_enable: 1 bit Control unit output: RegWrite }"""
 
         self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0}
         """ Update the values of registers in this stage.
@@ -60,4 +77,13 @@ class State(object):
          
          "Write-back: The two control lines are MemtoReg, which decides between sending the ALU result or the memory value to the register file, and RegWrite, which writes the chosen value." Comp.Org P.331
                  
-        { nop: No Operation}"""
+        { nop: No Operation
+        
+          Wrt_data: WB MUX output, write back to register file,
+        
+          Rs: ID Register input: rs1, 
+          Rt: ID Register input: rs2,
+          Wrt_reg_addr: ID Register input: Write register,
+          
+          wrt_enable: 1 bit Control unit output: RegWrite 
+        }"""
