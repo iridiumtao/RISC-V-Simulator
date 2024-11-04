@@ -37,12 +37,17 @@ def alu_control_unit(alu_op, func_code):
         elif func_code == 0b0110:
             alu_control = 0b0001  # OR
             logger.debug(f"ALU Control: {alu_control} (OR)")
+        elif func_code == 0b0100:
+            alu_control = 0b0111  # XOR
+            logger.debug(f"ALU Control: {alu_control} (XOR)")
         else:
             alu_control = 0b1111  # Should not happen
             logger.error(f"ALU Control: {alu_control} (Undefined)")
+            logger.error(f"alu_op: {alu_op}, func_code: {func_code}")
     else:
         alu_control = 0b1111  # Undefined behavior
         logger.error(f"ALU Control: {alu_control} (Undefined)")
+        logger.error(f"alu_op: {alu_op}, func_code: {func_code}")
     return alu_control
 
 
