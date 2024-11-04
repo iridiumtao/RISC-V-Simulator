@@ -87,7 +87,10 @@ def control_unit(opcode: int):
         "ALUOp": 0x00
     }
 
+    halt = False
+
     if opcode == 0b0110011:  # R-type
+        logger.debug(f"Opcode: {opcode} (R-type)")
         control_signals.update({
             "ALUSrc": 0,
             "MemtoReg": 0,
@@ -98,6 +101,7 @@ def control_unit(opcode: int):
             "ALUOp": 0b10
         })
     elif opcode == 0b0010011:  # I-type
+        logger.debug(f"Opcode: {opcode} (I-type)")
         control_signals.update({
             "ALUSrc": 1,
             "MemtoReg": 0,
@@ -108,6 +112,7 @@ def control_unit(opcode: int):
             "ALUOp": 0b10
         })
     elif opcode == 0b0000011:  # Load
+        logger.debug(f"Opcode: {opcode} (Load)")
         control_signals.update({
             "ALUSrc": 1,
             "MemtoReg": 1,
@@ -118,6 +123,7 @@ def control_unit(opcode: int):
             "ALUOp": 0b00
         })
     elif opcode == 0b0100011:  # Store
+        logger.debug(f"Opcode: {opcode} (Store)")
         control_signals.update({
             "ALUSrc": 1,
             "MemtoReg": None,
@@ -128,6 +134,7 @@ def control_unit(opcode: int):
             "ALUOp": 0b00
         })
     elif opcode == 0b1100011:  # Branch
+        logger.debug(f"Opcode: {opcode} (Branch)")
         control_signals.update({
             "ALUSrc": 0,
             "MemtoReg": None,
@@ -138,6 +145,7 @@ def control_unit(opcode: int):
             "ALUOp": 0b01
         })
     elif opcode == 0b1101111:  # JAL
+        logger.debug(f"Opcode: {opcode} (JAL)")
         control_signals.update({
             "ALUSrc": None,
             "MemtoReg": None,
@@ -147,10 +155,13 @@ def control_unit(opcode: int):
             "Branch": None,
             "ALUOp": None
         })
+    elif opcode == 0b1111111: # HALT
+        logger.debug(f"Opcode: {opcode} (HALT)")
+        halt = True
     else:
         raise ValueError("Unsupported opcode")
 
-    return control_signals
+    return control_signals, halt
 
 
 def imm_gen(opcode: int, instr: int) -> int:
@@ -166,6 +177,7 @@ def imm_gen(opcode: int, instr: int) -> int:
         imm = (instr >> 20) & 0xFFF  # Extract 12 bits
         if imm & 0x800:  # Check if sign bit (bit 11) is set
             imm |= 0xFFFFF000  # Sign extend to 32 bits
+        logger.debug(f"Immediate: {imm:032b} ({imm})")
         return imm
 
     elif opcode == 0b0100011:  # S-type (e.g., sw)
@@ -173,6 +185,7 @@ def imm_gen(opcode: int, instr: int) -> int:
         imm = ((instr >> 25) << 5) | ((instr >> 7) & 0x1F)  # Combine bits
         if imm & 0x800:  # Check if sign bit (bit 11) is set
             imm |= 0xFFFFF000  # Sign extend to 32 bits
+        logger.debug(f"Immediate: {imm:032b} ({imm})")
         return imm
 
     elif opcode == 0b1100011:  # B-type (e.g., beq)
@@ -181,11 +194,13 @@ def imm_gen(opcode: int, instr: int) -> int:
               (((instr >> 25) & 0x3F) << 5) | ((instr >> 8) & 0xF) << 1
         if imm & 0x1000:  # Check if sign bit (bit 12) is set
             imm |= 0xFFFFE000  # Sign extend to 32 bits
+        logger.debug(f"Immediate: {imm:032b} ({imm})")
         return imm
 
     elif opcode == 0b0110111 or opcode == 0b0010111:  # U-type (e.g., lui, auipc)
         # Immediate is in bits [31:12]
         imm = (instr & 0xFFFFF000)  # Upper 20 bits, zero-extended
+        logger.debug(f"Immediate: {imm:032b} ({imm})")
         return imm
 
     elif opcode == 0b1101111:  # J-type (e.g., jal)
@@ -194,10 +209,12 @@ def imm_gen(opcode: int, instr: int) -> int:
               (((instr >> 20) & 0x1) << 11) | ((instr >> 21) & 0x3FF) << 1
         if imm & 0x100000:  # Check if sign bit (bit 20) is set
             imm |= 0xFFE00000  # Sign extend to 32 bits
+        logger.debug(f"Immediate: {imm:032b} ({imm})")
         return imm
 
     else:
-        raise ValueError("Unsupported opcode for immediate generation.")
+        logger.debug(f"Immediate: 0 (No Imm)")
+        return 0 # Default immediate (shouldn't reach here for valid instructions)
 
 def multiplexer(a, b, select):
     if select == 0:

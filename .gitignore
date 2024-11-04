@@ -9,4 +9,9 @@ gen
 
 ~$*
 
-.venv/
+!/Sample_Testcases_SS/input/*/FS_/
+!/Sample_Testcases_SS/input/*/SS_/
+!/Sample_Testcases_SS/input/*/FS_DMEMResult.txt
+!/Sample_Testcases_SS/input/*/SS_DMEMResult.txt
+!/Sample_Testcases_SS/input/*/StateResult_FS.txt
+!/Sample_Testcases_SS/input/*/StateResult_SS.txt

@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 from src.memory import InstructionMemory, DataMemory
 from src.core import SingleStageCore, FiveStageCore
+from loguru import logger
 
 if __name__ == "__main__":
 
@@ -13,7 +14,7 @@ if __name__ == "__main__":
     ioDir = Path(args.iodir)
 
 
-    print("List IO Directory:", list(ioDir.iterdir()))
+    logger.info(f"List IO Directory: {list(ioDir.iterdir())}")
 
     imem = InstructionMemory("Imem", ioDir)
 

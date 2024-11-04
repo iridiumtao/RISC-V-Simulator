@@ -56,30 +56,27 @@ class SingleStageCore(Core):
         # back into the PC to be ready for the next clock cycle. This PC is also saved
         # in the IF/ID pipeline register in case it is needed later for an instruction,
         # such as beq." Comp.Org P.300
-        if_PC_adder_result = adder(4, self.state.IF["PC"])
+        if_pc_adder_result = adder(4, self.state.IF["PC"])
         logger.debug(f"PC: {self.state.IF['PC']}")
 
         self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
             self.state.IF["PC"])
+        program_counter = self.state.IF["PC"]
         logger.debug(f"Instruction: {self.state.ID['Instr']:032b}")
 
         # --------------------- ID stage ---------------------
         logger.debug(f"--------------------- ID stage ---------------------")
 
-        # See comments in state.py to see more information
-        self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F  # bits [19:15]
-        self.state.EX["Rt"] = (self.state.ID["Instr"] >> 20) & 0x1F  # bits [24:20]
-        self.state.EX["Wrt_reg_addr"] = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
-
-        # Ref: Comp.Org P.282.e5 Figure e4.5.4
-        self.state.EX["Read_data1"] = self.register_file.read(self.state.EX["Rs"])
-        self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
-
         opcode = self.state.ID["Instr"] & 0x7F
-        logger.debug(f"Opcode: {opcode:07b}")
-        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
 
-        control_signals = control_unit(opcode)
+        control_signals, halt = control_unit(opcode)
+        if halt:
+            self.halted = True
+            self.state.IF["nop"] = True
+            self.state.ID["nop"] = True
+            self.state.EX["nop"] = True
+            self.state.MEM["nop"] = True
+            self.state.WB["nop"] = True
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrc"]  # EX stage
@@ -92,7 +89,30 @@ class SingleStageCore(Core):
         mem_to_reg = control_signals["MemtoReg"]  # WB stage, but not found for Single Stage Machine
         self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
+        # See comments in state.py to see more information
+        self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F  # bits [19:15]
+        self.state.EX["Rt"] = (self.state.ID["Instr"] >> 20) & 0x1F  # bits [24:20]
+        self.state.EX["Wrt_reg_addr"] = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
+
+        # Ref: Comp.Org P.282.e5 Figure e4.5.4
+        self.state.EX["Read_data1"] = self.register_file.read(self.state.EX["Rs"])
+        self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
+
+        # an always true condition so I can collapse the block
+        if logger.level("DEBUG"):
+            logger.opt(colors=True).info(f"+-----------------------------+---------------------------------+-----------------------------+")
+            logger.opt(colors=True).info(f"| Register      | Mem Addr  | \t\t\tValue Bin (Dec) \t\t  |")
+            logger.opt(colors=True).info(f"| Rs / Rd1      | {self.state.EX['Rs']:05b} ({self.state.EX['Rs']}) | {self.state.EX['Read_data1']:032b} ({self.state.EX['Read_data1']}) |")
+            logger.opt(colors=True).info(f"| Rt / Rd2      | {self.state.EX['Rt']:05b} ({self.state.EX['Rt']}) | {self.state.EX['Read_data2']:032b} ({self.state.EX['Read_data2']}) |")
+            logger.opt(colors=True).info(f"| Wrt_reg_addr  | {self.state.EX['Wrt_reg_addr']:05b} ({self.state.EX['Wrt_reg_addr']}) |")
+            logger.opt(colors=True).info(f"+-----------------------------+---------------------------------+-----------------------------+")
+
+
+
         # todo: Branch/PCSrc, MemtoReg should also be set in this stage, not found in state machine
+
+        # Imm Gen
+        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
 
         func7_bit = (self.state.ID["Instr"] >> 30) & 0b1
         func3 = (self.state.ID["Instr"] >> 12) & 0b111
@@ -101,17 +121,24 @@ class SingleStageCore(Core):
         # --------------------- EX stage ---------------------
         logger.debug(f"--------------------- EX stage ---------------------")
 
+        # Passing data to subsequent pipeline registers
         self.state.MEM["Rs"] = self.state.EX["Rs"]
         self.state.MEM["Rt"] = self.state.EX["Rt"]
         self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
 
-        # bring data to next stage (see Comp.Org p.313 Figure 4.52)
+        # Passing control signal to subsequent pipeline registers
+        # (see Comp.Org p.313 Figure 4.52)
         self.state.MEM["rd_mem"] = self.state.EX["rd_mem"]
         self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
         self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
 
-        ex_pc_adder_result = adder(self.state.IF["PC"], self.state.EX["Imm"])
+        # PC handling
+        ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
         # todo PCSrc MUX
+        if pc_src == 1:
+            program_counter = ex_pc_adder_result
+        else:
+            program_counter = if_pc_adder_result
 
         alu_input_b = multiplexer(self.state.EX["Read_data2"],
                                   self.state.EX["Imm"],
@@ -134,22 +161,27 @@ class SingleStageCore(Core):
         # --------------------- MEM stage --------------------
         logger.debug(f"--------------------- MEM stage ---------------------")
 
-        # todo: not sure what to do
+        # Passing data to subsequent pipeline registers
         self.state.WB["Wrt_data"] = self.state.MEM["ALUresult"]
         self.state.WB["Rs"] = self.state.MEM["Rs"]
         self.state.WB["Rt"] = self.state.MEM["Rt"]
 
-        # bring data to next stage (see Comp.Org p.313 Figure 4.52)
+        # Passing control signal to subsequent pipeline registers
+        # (see Comp.Org p.313 Figure 4.52)
         self.state.WB["Wrt_reg_addr"] = self.state.MEM["Wrt_reg_addr"]
         self.state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
 
         if self.state.MEM["wrt_mem"] == 1:
+            logger.debug("Write data")
             self.ext_data_memory.write_data_memory(
                 self.state.EX["Read_data2"],
                 self.state.MEM["ALUresult"])
         data = None  # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
+            logger.debug("Read data")
             data = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+
+
 
         # --------------------- WB stage ---------------------
         logger.debug(f"--------------------- WB stage ---------------------")
@@ -159,7 +191,12 @@ class SingleStageCore(Core):
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 
-        self.halted = True
+        self.nextState.IF["PC"] = program_counter
+
+        # ----------------------- End ------------------------
+        logger.opt(colors=True).debug(f"<white>-------------------- stage end ---------------------</white>")
+
+        # self.halted = True
         if self.state.IF["nop"]:
             self.halted = True
 

@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from loguru import logger
 
 class InstructionMemory(object):
     """
@@ -65,6 +65,7 @@ class DataMemory(object):
             int: The 32-bit binary data in integer format
         """
         bin_str = ''.join(self.d_mem[read_address: read_address + 4])
+        logger.debug(f"Reading data {bin_str} from address {read_address:05b}")
         return int(bin_str, 2)
 
     def write_data_memory(self, address, write_data):
@@ -76,6 +77,7 @@ class DataMemory(object):
             write_data (int): The 32-bit binary data to write in integer format.
         """
         # Convert the integer write_data to a 32-bit binary string
+        logger.debug(f"Writing data {write_data} to address {address}")
         binary_str = f"{write_data:032b}"
 
         # todo: check if negative two's complement conversion is needed

@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from loguru import logger
 # memory.py size, in reality, the memory.py size should be 2^32,
 # but for this lab, for the space resaon, we keep it as this large number,
 # but the memory.py is still 32-bit addressable.
@@ -20,6 +20,7 @@ class RegisterFile(object):
         """
         self.outputFile = io_dir / "RFResult.txt"
         self.Registers = [0x0 for i in range(32)]
+        Path(io_dir).mkdir(parents=True, exist_ok=True)
 
     def read(self, reg_addr):
         """
@@ -31,7 +32,11 @@ class RegisterFile(object):
         Returns:
             int: The data read from the register.
         """
-        return self.Registers[reg_addr]
+        data = self.Registers[reg_addr]
+        if data is None:
+            data = 0
+        logger.debug(f"Read register {reg_addr:05b}: {data:032b} ({data})")
+        return data
 
 
     def write(self, reg_addr, write_reg_data):
@@ -59,9 +64,10 @@ class RegisterFile(object):
         """
         op = ["-" * 70 + "\n", "State of RF after executing cycle:" + str(cycle) + "\n"]
         op.extend([str(val) + "\n" for val in self.Registers])
+
         if (cycle == 0):
-            perm = "w"
+            perm = "w+"
         else:
-            perm = "a"
+            perm = "a+"
         with open(self.outputFile, perm) as file:
             file.writelines(op)
