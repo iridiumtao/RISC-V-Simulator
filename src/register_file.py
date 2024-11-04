@@ -48,7 +48,7 @@ class RegisterFile(object):
         if reg_addr == 0:  # Avoid writing to register 0
             return
 
-        # todo: check if negative two's complement conversion is needed
+        # todo: negative two's complement conversion is needed
 
         self.Registers[reg_addr] = write_reg_data
 

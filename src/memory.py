@@ -90,7 +90,7 @@ class DataMemory(object):
         logger.debug(f"Writing data {write_data} to address {address}")
         binary_str = f"{write_data:032b}"
 
-        # todo: check if negative two's complement conversion is needed
+        # todo: negative two's complement conversion is needed
 
         # Write each byte (8 bits) to the memory in order
         logger.debug(len(self.d_mem))
