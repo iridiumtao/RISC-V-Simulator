@@ -5,7 +5,7 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
-from src.components import alu, alu_control, adder, control_unit, imm_gen
+from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer
 
 
 class Core(object):
@@ -48,31 +48,27 @@ class SingleStageCore(Core):
         # --------------------- IF stage ---------------------
         logger.debug(f"--------------------- IF stage ---------------------")
 
-        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(self.state.IF["PC"])
-        logger.debug(f"Instruction: {self.state.ID['Instr']}")
-
         # TODO: Temporarily. I'll figure out if this is correct
         # "The PC address is incremented by 4 and then written
         # back into the PC to be ready for the next clock cycle. This PC is also saved
         # in the IF/ID pipeline register in case it is needed later for an instruction,
         # such as beq." Comp.Org P.300
-        self.state.IF["PC"] = adder(self.state.IF["PC"], 4)
+        if_PC_adder_result = adder(4, self.state.IF["PC"])
         logger.debug(f"PC: {self.state.IF['PC']}")
 
-
-
+        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(self.state.IF["PC"])
+        logger.debug(f"Instruction: {self.state.ID['Instr']}")
 
         # --------------------- ID stage ---------------------
 
         # See comments in state.py to see more information
-        self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F # bits [19:15]
+        self.state.EX["Rs"] = (self.state.ID["Instr"] >> 15) & 0x1F  # bits [19:15]
         self.state.EX["Rt"] = (self.state.ID["Instr"] >> 20) & 0x1F  # bits [24:20]
         self.state.EX["Wrt_reg_addr"] = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
 
         # Ref: Comp.Org P.282.e5 Figure e4.5.4
         self.state.EX["Read_data1"] = self.register_file.read(self.state.EX["Rs"])
         self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
-
 
         opcode = self.state.ID["Instr"] & 0x7F
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instruction=self.state.ID["Instr"])
@@ -87,15 +83,25 @@ class SingleStageCore(Core):
         # todo: PCSrc, MemtoReg should also be set in this stage, not found in state machine
         # --------------------- EX stage ---------------------
 
-        # todo
+        ex_pc_adder_result = adder(self.state.IF["PC"], self.state.EX["Imm"])
+        # todo PCSrc MUX
+
+        alu_input_b = multiplexer(self.state.EX["Read_data2"],
+                                  self.state.EX["Imm"],
+                                  self.state.EX["is_I_type"][1])
+
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
         # add (00) for loads and stores, subtract and
         # test if zero (01) for beq, or
         # be determined by the operation encoded in the funct7 and funct3 fields (10).
+        alu_control = alu_control_unit(self.state.EX["alu_op"], self.state.EX["is_I_type"])
 
-        # todo
         # ALU control 4-bit
+        zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
+            alu_control=alu_control,
+            a=self.state.EX["Read_data1"],
+            b=alu_input_b)
 
         # --------------------- MEM stage --------------------
 
@@ -158,7 +164,7 @@ class FiveStageCore(Core):
         self.register_file.output(self.cycle)  # dump RF
         self.printState(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
-        self.state = self.nextState  #The end of the cycle and updates the current state with the values calculated in this cycle
+        self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
         self.cycle += 1
 
     def printState(self, state, cycle):

@@ -1,7 +1,7 @@
-def alu_control(alu_op, func_code):
+def alu_control_unit(alu_op, func_code):
     """ALU Control logic to determine the ALU operation code based on ALUOp and FuncCode.
 
-    ALU control defign reference Comp.Org p.A-37"""
+    ALU control define reference Comp.Org p.A-37"""
 
     # Initialize alu_control to default value
     alu_control = 15  # Default case, should not happen
@@ -22,7 +22,7 @@ def alu_control(alu_op, func_code):
     return alu_control
 
 
-def alu(alu_control, a, b):
+def arithmetic_logic_unit(alu_control, a, b):
     """ ALU design reference Comp.Org p.A-36"""
 
     # Perform ALU operation based on ALU_control value
@@ -44,7 +44,7 @@ def alu(alu_control, a, b):
     # Zero is True if alu_result is 0
     zero = (alu_result == 0)
 
-    return alu_result, zero
+    return zero, alu_result
 
 def adder(a, b):
     return a + b
@@ -52,13 +52,13 @@ def adder(a, b):
 
 def control_unit(opcode: int):
     control_signals = {
-        "ALUSrc": 0,
+        "ALUSrc": 0x00,
         "MemtoReg": 0,
         "RegWrite": 0,
         "MemRead": 0,
         "MemWrite": 0,
         "Branch": 0,
-        "ALUOp": 0
+        "ALUOp": 0x00
     }
 
     if opcode == 0b0110011:  # R-type
@@ -172,3 +172,9 @@ def imm_gen(opcode: int, instr: int) -> int:
 
     else:
         raise ValueError("Unsupported opcode for immediate generation.")
+
+def multiplexer(a, b, select):
+    if select == 0:
+        return a
+    else:
+        return b
