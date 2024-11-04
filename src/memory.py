@@ -88,9 +88,20 @@ class DataMemory(object):
         """
         # Convert the integer write_data to a 32-bit binary string
         logger.debug(f"Writing data {write_data} to address {address}")
-        binary_str = f"{write_data:032b}"
 
-        # todo: negative two's complement conversion is needed
+        # Handle negative two's complement conversion
+        if write_data < 0:
+            write_data = (1 << 32) + write_data  # Convert to 2's complement 32-bit
+
+        # Explain: say write_data = -2
+        # (1 << 32) generates 2^32
+        # 1 << 32 = 100000000000000000000000000000000 (33 bits)
+        #         = 4294967296
+        # When add -2
+        # 4294967296 + (-2) = 4294967294
+        #                   = 11111111111111111111111111111110 (32 bits)
+
+        binary_str = f"{write_data:032b}"
 
         # Write each byte (8 bits) to the memory in order
         logger.debug(len(self.d_mem))

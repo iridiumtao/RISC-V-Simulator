@@ -48,7 +48,9 @@ class RegisterFile(object):
         if reg_addr == 0:  # Avoid writing to register 0
             return
 
-        # todo: negative two's complement conversion is needed
+        # Handle negative two's complement conversion
+        if write_reg_data < 0:
+            write_reg_data = (1 << 32) + write_reg_data  # Convert to 2's complement 32-bit
 
         self.Registers[reg_addr] = write_reg_data
 
