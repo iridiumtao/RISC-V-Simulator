@@ -71,7 +71,7 @@ class SingleStageCore(Core):
         self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
 
         opcode = self.state.ID["Instr"] & 0x7F
-        self.state.EX["Imm"] = imm_gen(opcode=opcode, instruction=self.state.ID["Instr"])
+        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
 
         control_signals = control_unit(opcode)
         self.state.EX["alu_op"] = control_signals["ALUOp"] # EX stage
@@ -103,7 +103,7 @@ class SingleStageCore(Core):
 
         alu_input_b = multiplexer(self.state.EX["Read_data2"],
                                   self.state.EX["Imm"],
-                                  self.state.EX["is_I_type"][1])
+                                  self.state.EX["is_I_type"] & 1) # extract the least significant bit
 
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
