@@ -34,12 +34,15 @@ class State(object):
           Read_data2: ID Register output: Read register 2 (rd2), 
           
           Imm: Imm Gen output, 
-
-          wrt_enable: 1 bit Control unit output: RegWrite
-          is_I_type: 2 bits Control unit output: ALUSrc, 
-          rd_mem: 1 bit Control unit output: MemRead, 
+          
           alu_op: 2 bits Control line output: ALUOp (connect to ALU control),
+          is_I_type: 2 bits Control unit output: ALUSrc, 
+
+          rd_mem: 1 bit Control unit output: MemRead, 
           wrt_mem: 1 bit Control unit output: MemWrite,
+          
+          wrt_enable: 1 bit Control unit output: RegWrite
+
         }"""
 
         self.MEM = {"nop": False, "ALUresult": 0, "Store_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "rd_mem": 0,

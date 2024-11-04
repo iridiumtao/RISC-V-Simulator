@@ -74,14 +74,29 @@ class SingleStageCore(Core):
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instruction=self.state.ID["Instr"])
 
         control_signals = control_unit(opcode)
-        self.state.EX["wrt_enable"] = control_signals["RegWrite"]
-        self.state.EX["is_I_type"] = control_signals["ALUSrc"]
-        self.state.EX["rd_mem"] = control_signals["MemRead"]
-        self.state.EX["alu_op"] = control_signals["ALUOp"]
-        self.state.EX["wrt_mem"] = control_signals["MemWrite"]
+        self.state.EX["alu_op"] = control_signals["ALUOp"] # EX stage
+        self.state.EX["is_I_type"] = control_signals["ALUSrc"] # EX stage
 
-        # todo: PCSrc, MemtoReg should also be set in this stage, not found in state machine
+        # Branch # MEM stage
+        self.state.EX["rd_mem"] = control_signals["MemRead"] # MEM stage
+        self.state.EX["wrt_mem"] = control_signals["MemWrite"] # MEM stage
+
+        # MemtoReg # WB stage
+        self.state.EX["wrt_enable"] = control_signals["RegWrite"] # WB stage
+
+
+        # todo: Branch/PCSrc, MemtoReg should also be set in this stage, not found in state machine
         # --------------------- EX stage ---------------------
+
+        # todo: not sure what to do
+        self.state.MEM["Rs"] = self.state.EX["Rs"]
+        self.state.MEM["Rt"] = self.state.EX["Rt"]
+        self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
+
+        # bring data to next stage (see Comp.Org p.313 Figure 4.52)
+        self.state.MEM["rd_mem"] = self.state.EX["rd_mem"]
+        self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
+        self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
 
         ex_pc_adder_result = adder(self.state.IF["PC"], self.state.EX["Imm"])
         # todo PCSrc MUX
@@ -105,7 +120,31 @@ class SingleStageCore(Core):
 
         # --------------------- MEM stage --------------------
 
+        # todo: not sure what to do
+        self.state.WB["Wrt_data"] = self.state.MEM["ALUresult"]
+        self.state.WB["Rs"] = self.state.MEM["Rs"]
+        self.state.WB["Rt"] = self.state.MEM["Rt"]
+
+        # bring data to next stage (see Comp.Org p.313 Figure 4.52)
+        self.state.WB["Wrt_reg_addr"] = self.state.MEM["Wrt_reg_addr"]
+        self.state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
+
+        if self.state.MEM["wrt_mem"] == 1:
+            self.ext_data_memory.write_data_memory(self.state.EX["Read_data2"], self.state.MEM["ALUresult"])
+        if self.state.MEM["rd_mem"] == 1:
+            # todo define read_data_memory?
+            self.state.WB["??"] = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+
         # --------------------- WB stage ---------------------
+
+        # todo define MemtoReg?
+        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["???"], self.state.WB["Wrt_data"], mem_to_reg)
+        # todo: finish WB stage p.300 bottom
+
+
+
+
+
 
         self.halted = True
         if self.state.IF["nop"]:
