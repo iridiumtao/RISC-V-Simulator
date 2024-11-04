@@ -31,8 +31,8 @@ class RegisterFile(object):
         Returns:
             int: The data read from the register.
         """
-        # Fill in
-        pass
+        return self.Registers[reg_addr]
+
 
     def write(self, reg_addr, write_reg_data):
         """
@@ -42,8 +42,13 @@ class RegisterFile(object):
             reg_addr (int): The address of the register to write to. (0~31)
             write_reg_data (int): The data to write to the register.
         """
-        # Fill in
-        pass
+
+        if reg_addr == 0:  # Avoid writing to register 0
+            return
+
+        # todo: check if negative two's complement conversion is needed
+
+        self.Registers[reg_addr] = write_reg_data
 
     def output(self, cycle):
         """
