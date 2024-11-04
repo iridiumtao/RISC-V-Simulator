@@ -1,6 +1,11 @@
 from pathlib import Path
 from loguru import logger
 
+# memory.py size, in reality, the memory.py size should be 2^32,
+# but for this lab, for the space resaon, we keep it as this large number,
+# but the memory.py is still 32-bit addressable.
+MEM_SIZE = 1000
+
 class InstructionMemory(object):
     """
     InstructionMemory simulates the instruction memory in a processor.
@@ -19,6 +24,8 @@ class InstructionMemory(object):
         # Each line in the files contain a byte of data
         with open(io_dir / "imem.txt") as im:
             self.i_mem = [data.replace("\n", "") for data in im.readlines()]
+            self.i_mem += ["0" * 8] * (1000 - len(self.i_mem))
+
 
     def read_instruction(self, read_address: int) -> int:
         """
@@ -33,6 +40,8 @@ class InstructionMemory(object):
 
         # load 4 piece of data and concatenate them
         bin_str = ''.join(self.i_mem[read_address: read_address+4])
+        if bin_str == "":
+            return 0
         return int(bin_str, 2)
 
 
@@ -53,6 +62,7 @@ class DataMemory(object):
         self.ioDir = io_dir
         with open(io_dir / "dmem.txt") as dm:
             self.d_mem = [data.replace("\n", "") for data in dm.readlines()]
+            self.d_mem += ["0" * 8] * (1000 - len(self.d_mem))
 
     def read_instruction(self, read_address):
         """
@@ -83,6 +93,8 @@ class DataMemory(object):
         # todo: check if negative two's complement conversion is needed
 
         # Write each byte (8 bits) to the memory in order
+        logger.debug(len(self.d_mem))
+        logger.debug(address)
         for i in range(4):
             self.d_mem[address + i] = binary_str[i * 8: (i + 1) * 8]
 

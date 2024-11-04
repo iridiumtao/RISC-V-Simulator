@@ -158,6 +158,8 @@ def control_unit(opcode: int):
     elif opcode == 0b1111111: # HALT
         logger.debug(f"Opcode: {opcode} (HALT)")
         halt = True
+    elif opcode == 0b0000000:  # 0
+        pass
     else:
         raise ValueError("Unsupported opcode")
 

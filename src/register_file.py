@@ -1,9 +1,6 @@
 from pathlib import Path
 from loguru import logger
-# memory.py size, in reality, the memory.py size should be 2^32,
-# but for this lab, for the space resaon, we keep it as this large number,
-# but the memory.py is still 32-bit addressable.
-MEM_SIZE = 1000
+
 
 
 class RegisterFile(object):
@@ -63,7 +60,7 @@ class RegisterFile(object):
             cycle (int): The current cycle number.
         """
         op = ["-" * 70 + "\n", "State of RF after executing cycle:" + str(cycle) + "\n"]
-        op.extend([str(val) + "\n" for val in self.Registers])
+        op.extend([format(val, 'b').zfill(32) + "\n" for val in self.Registers])
 
         if (cycle == 0):
             perm = "w+"

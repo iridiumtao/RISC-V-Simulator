@@ -57,6 +57,7 @@ class SingleStageCore(Core):
         # in the IF/ID pipeline register in case it is needed later for an instruction,
         # such as beq." Comp.Org P.300
         if_pc_adder_result = adder(4, self.state.IF["PC"])
+        self.state.ID["nop"] = self.state.IF["nop"]
         logger.debug(f"PC: {self.state.IF['PC']}")
 
         self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
@@ -69,14 +70,12 @@ class SingleStageCore(Core):
 
         opcode = self.state.ID["Instr"] & 0x7F
 
+        self.state.EX["nop"] = self.state.ID["nop"]
+
         control_signals, halt = control_unit(opcode)
         if halt:
-            self.halted = True
             self.state.IF["nop"] = True
-            self.state.ID["nop"] = True
-            self.state.EX["nop"] = True
-            self.state.MEM["nop"] = True
-            self.state.WB["nop"] = True
+
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrc"]  # EX stage
@@ -122,6 +121,7 @@ class SingleStageCore(Core):
         logger.debug(f"--------------------- EX stage ---------------------")
 
         # Passing data to subsequent pipeline registers
+        self.state.MEM["nop"] = self.state.EX["nop"]
         self.state.MEM["Rs"] = self.state.EX["Rs"]
         self.state.MEM["Rt"] = self.state.EX["Rt"]
         self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
@@ -135,10 +135,7 @@ class SingleStageCore(Core):
         # PC handling
         ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
         # todo PCSrc MUX
-        if pc_src == 1:
-            program_counter = ex_pc_adder_result
-        else:
-            program_counter = if_pc_adder_result
+        program_counter = multiplexer(if_pc_adder_result, ex_pc_adder_result, pc_src)
 
         alu_input_b = multiplexer(self.state.EX["Read_data2"],
                                   self.state.EX["Imm"],
@@ -162,6 +159,7 @@ class SingleStageCore(Core):
         logger.debug(f"--------------------- MEM stage ---------------------")
 
         # Passing data to subsequent pipeline registers
+        self.state.WB["nop"] = self.state.MEM["nop"]
         self.state.WB["Wrt_data"] = self.state.MEM["ALUresult"]
         self.state.WB["Rs"] = self.state.MEM["Rs"]
         self.state.WB["Rt"] = self.state.MEM["Rt"]
@@ -174,30 +172,36 @@ class SingleStageCore(Core):
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
             self.ext_data_memory.write_data_memory(
-                self.state.EX["Read_data2"],
-                self.state.MEM["ALUresult"])
-        data = None  # not found in state machine
+                self.state.MEM["ALUresult"],
+                self.state.EX["Read_data2"])
+        data_memory_output = None  # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
-            data = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+            data_memory_output = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
 
 
 
         # --------------------- WB stage ---------------------
         logger.debug(f"--------------------- WB stage ---------------------")
 
-        self.state.WB["Wrt_data"] = multiplexer(data, self.state.WB["Wrt_data"], mem_to_reg)
+        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["Wrt_data"], data_memory_output , mem_to_reg)
 
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 
-        self.nextState.IF["PC"] = program_counter
+        if not self.state.IF["nop"]:
+            self.nextState.IF["PC"] = program_counter
+        else:
+            # 當nop時，保持PC不變
+            self.nextState.IF["PC"] = self.state.IF["PC"]
 
         # ----------------------- End ------------------------
         logger.opt(colors=True).debug(f"<white>-------------------- stage end ---------------------</white>")
 
         # self.halted = True
-        if self.state.IF["nop"]:
+        # if self.state.IF["nop"]:
+        #     self.halted = True
+        if self.state.WB["nop"]:
             self.halted = True
 
         self.register_file.output(self.cycle)  # dump RF
