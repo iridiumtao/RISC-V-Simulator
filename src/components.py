@@ -52,7 +52,7 @@ def alu_control_unit(alu_op, func_code):
 
 
 def arithmetic_logic_unit(alu_control, a, b):
-    """ ALU design reference Comp.Org p.A-36"""
+    """ ALU design reference Comp.Org p.A-36. But XOR design is **WRONG**"""
 
     # Perform ALU operation based on ALU_control value
     if alu_control == 0:
@@ -63,9 +63,9 @@ def arithmetic_logic_unit(alu_control, a, b):
         alu_result = a + b
     elif alu_control == 6:
         alu_result = a - b
-    elif alu_control == 7:
-        alu_result = 1 if a < b else 0
-    elif alu_control == 12:
+    elif alu_control == 7: # XOR
+        alu_result = a ^ b
+    elif alu_control == 12: # NOR
         alu_result = ~(a | b)
     else:
         alu_result = 0
@@ -73,6 +73,7 @@ def arithmetic_logic_unit(alu_control, a, b):
     # Zero is True if alu_result is 0
     zero = (alu_result == 0)
 
+    logger.debug(f"ALU Input: {a}, {b}")
     logger.debug(f"ALU Result: {alu_result}, Zero: {zero}")
 
     return zero, alu_result

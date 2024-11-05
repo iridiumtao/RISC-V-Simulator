@@ -49,7 +49,7 @@ class SingleStageCore(Core):
         # Your implementation
 
         # --------------------- IF stage ---------------------
-        logger.debug(f"--------------------- IF stage ---------------------")
+        logger.debug(f"--------------------- IF stage ")
 
         # TODO: Temporarily. I'll figure out if this is correct
         # "The PC address is incremented by 4 and then written
@@ -58,15 +58,18 @@ class SingleStageCore(Core):
         # such as beq." Comp.Org P.300
         if_pc_adder_result = adder(4, self.state.IF["PC"])
         self.state.ID["nop"] = self.state.IF["nop"]
-        logger.debug(f"PC: {self.state.IF['PC']}")
+        logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
 
         self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
             self.state.IF["PC"])
         program_counter = self.state.IF["PC"]
+
+        logger.debug(f"Instruction: +.....-+...-+...-+.-+...-+.....-")
+        logger.debug(f"Instruction: func7.|rs2.|rs1.|3.|rd..|opcode|")
         logger.debug(f"Instruction: {self.state.ID['Instr']:032b}")
 
         # --------------------- ID stage ---------------------
-        logger.debug(f"--------------------- ID stage ---------------------")
+        logger.debug(f"--------------------- ID stage ")
 
         opcode = self.state.ID["Instr"] & 0x7F
 
@@ -117,8 +120,13 @@ class SingleStageCore(Core):
         func3 = (self.state.ID["Instr"] >> 12) & 0b111
         alu_control_func_code = (func7_bit << 3) | func3
 
+        # special ALU handling, if I-type, omit the func7 bit
+        # I didn't find this in the book, without this, ALU cannot work on I-type
+        if opcode == 19:  # I-type
+            alu_control_func_code = alu_control_func_code & 0b111
+
         # --------------------- EX stage ---------------------
-        logger.debug(f"--------------------- EX stage ---------------------")
+        logger.debug(f"--------------------- EX stage ")
 
         # Passing data to subsequent pipeline registers
         self.state.MEM["nop"] = self.state.EX["nop"]
@@ -156,7 +164,7 @@ class SingleStageCore(Core):
             b=alu_input_b)
 
         # --------------------- MEM stage --------------------
-        logger.debug(f"--------------------- MEM stage ---------------------")
+        logger.debug(f"--------------------- MEM stage ")
 
         # Passing data to subsequent pipeline registers
         self.state.WB["nop"] = self.state.MEM["nop"]
@@ -182,7 +190,7 @@ class SingleStageCore(Core):
 
 
         # --------------------- WB stage ---------------------
-        logger.debug(f"--------------------- WB stage ---------------------")
+        logger.debug(f"--------------------- WB stage ")
 
         self.state.WB["Wrt_data"] = multiplexer(self.state.WB["Wrt_data"], data_memory_output , mem_to_reg)
 
@@ -196,7 +204,9 @@ class SingleStageCore(Core):
             self.nextState.IF["PC"] = self.state.IF["PC"]
 
         # ----------------------- End ------------------------
-        logger.opt(colors=True).debug(f"<white>-------------------- stage end ---------------------</white>")
+        logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
+        logger.opt(colors=True).debug(f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle+1} cycle ↓ --------------</green>")
+        logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
 
         # self.halted = True
         # if self.state.IF["nop"]:
