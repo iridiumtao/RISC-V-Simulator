@@ -70,6 +70,8 @@ def arithmetic_logic_unit(alu_control, a, b):
     else:
         alu_result = 0
 
+    alu_result = alu_result & 0xFFFFFFFF # overflow wraparound
+
     # Zero is True if alu_result is 0
     zero = (alu_result == 0)
 
