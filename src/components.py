@@ -155,13 +155,13 @@ def control_unit(opcode: int):
     elif opcode == 0b1101111:  # JAL
         logger.debug(f"Opcode: {opcode} (JAL)")
         control_signals.update({
-            "ALUSrc": None,
-            "MemtoReg": None,
+            "ALUSrc": 0,
+            "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
             "MemWrite": 0,
-            "Branch": None,
-            "ALUOp": None
+            "Branch": 0,
+            "ALUOp": 0
         })
     elif opcode == 0b1111111: # HALT
         logger.debug(f"Opcode: {opcode} (HALT)")
@@ -227,7 +227,16 @@ def imm_gen(opcode: int, instr: int) -> int:
         return 0 # Default immediate (shouldn't reach here for valid instructions)
 
 def multiplexer(a, b, select):
+    """
+    Multiplexes between two inputs based on the select signal.
+
+    :param select: If 0, output `a`. If 1, output `b`.
+    :return: The selected input based on the select signal.
+    """
     if select == 0:
         return a
     else:
         return b
+
+def and_gate(a, b):
+    return a & b

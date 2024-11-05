@@ -5,7 +5,7 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
-from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer
+from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate
 
 
 class Core(object):
@@ -83,8 +83,7 @@ class SingleStageCore(Core):
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrc"]  # EX stage
 
-        # todo: maybe in control signals "Branch" should be renamed to "PCSrc"?
-        pc_src = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
+        branch = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
         self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
         self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
 
@@ -140,11 +139,6 @@ class SingleStageCore(Core):
         self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
         self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
 
-        # PC handling
-        ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
-        # todo PCSrc MUX
-        program_counter = multiplexer(if_pc_adder_result, ex_pc_adder_result, pc_src)
-
         alu_input_b = multiplexer(self.state.EX["Read_data2"],
                                   self.state.EX["Imm"],
                                   self.state.EX["is_I_type"] & 1)  # extract the least significant bit
@@ -163,6 +157,12 @@ class SingleStageCore(Core):
             a=self.state.EX["Read_data1"],
             b=alu_input_b)
 
+        # PC handling
+        ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
+        # Branch handling
+        pc_src = and_gate(branch, zero)
+        program_counter = multiplexer(if_pc_adder_result, ex_pc_adder_result, pc_src)
+
         # --------------------- MEM stage --------------------
         logger.debug(f"--------------------- MEM stage ")
 
@@ -177,6 +177,7 @@ class SingleStageCore(Core):
         self.state.WB["Wrt_reg_addr"] = self.state.MEM["Wrt_reg_addr"]
         self.state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
 
+        # Data Memory Unit
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
             self.ext_data_memory.write_data_memory(
