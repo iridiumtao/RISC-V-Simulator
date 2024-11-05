@@ -81,7 +81,7 @@ class SingleStageCore(Core):
 
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
-        self.state.EX["is_I_type"] = control_signals["ALUSrc"]  # EX stage
+        self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
 
         branch = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
         self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
@@ -139,9 +139,10 @@ class SingleStageCore(Core):
         self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
         self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
 
-        alu_input_b = multiplexer(self.state.EX["Read_data2"],
-                                  self.state.EX["Imm"],
-                                  self.state.EX["is_I_type"] & 1)  # extract the least significant bit
+        alu_input_b = multiplexer(self.state.EX["is_I_type"],
+                                  self.state.EX["Read_data2"],
+                                  4,
+                                  self.state.EX["Imm"])  # extract the least significant bit
 
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
@@ -161,7 +162,7 @@ class SingleStageCore(Core):
         ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
         # Branch handling
         pc_src = and_gate(branch, zero)
-        program_counter = multiplexer(if_pc_adder_result, ex_pc_adder_result, pc_src)
+        program_counter = multiplexer(pc_src, if_pc_adder_result, ex_pc_adder_result)
 
         # --------------------- MEM stage --------------------
         logger.debug(f"--------------------- MEM stage ")
@@ -193,7 +194,7 @@ class SingleStageCore(Core):
         # --------------------- WB stage ---------------------
         logger.debug(f"--------------------- WB stage ")
 
-        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["Wrt_data"], data_memory_output , mem_to_reg)
+        self.state.WB["Wrt_data"] = multiplexer(mem_to_reg, self.state.WB["Wrt_data"], data_memory_output)
 
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])

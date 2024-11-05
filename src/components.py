@@ -86,7 +86,7 @@ def adder(a, b):
 
 def control_unit(opcode: int):
     control_signals = {
-        "ALUSrc": 0x00,
+        "ALUSrcB": 0b00,
         "MemtoReg": 0,
         "RegWrite": 0,
         "MemRead": 0,
@@ -100,7 +100,7 @@ def control_unit(opcode: int):
     if opcode == 0b0110011:  # R-type
         logger.debug(f"Opcode: {opcode} (R-type)")
         control_signals.update({
-            "ALUSrc": 0,
+            "ALUSrcB": 0,
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
@@ -111,7 +111,7 @@ def control_unit(opcode: int):
     elif opcode == 0b0010011:  # I-type
         logger.debug(f"Opcode: {opcode} (I-type)")
         control_signals.update({
-            "ALUSrc": 1,
+            "ALUSrcB": 0b10,
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
@@ -122,7 +122,7 @@ def control_unit(opcode: int):
     elif opcode == 0b0000011:  # Load
         logger.debug(f"Opcode: {opcode} (Load)")
         control_signals.update({
-            "ALUSrc": 1,
+            "ALUSrcB": 0b10,
             "MemtoReg": 1,
             "RegWrite": 1,
             "MemRead": 1,
@@ -133,8 +133,8 @@ def control_unit(opcode: int):
     elif opcode == 0b0100011:  # Store
         logger.debug(f"Opcode: {opcode} (Store)")
         control_signals.update({
-            "ALUSrc": 1,
-            "MemtoReg": None,
+            "ALUSrcB": 0b10,
+            "MemtoReg": 0,
             "RegWrite": 0,
             "MemRead": 0,
             "MemWrite": 1,
@@ -144,8 +144,8 @@ def control_unit(opcode: int):
     elif opcode == 0b1100011:  # Branch
         logger.debug(f"Opcode: {opcode} (Branch)")
         control_signals.update({
-            "ALUSrc": 0,
-            "MemtoReg": None,
+            "ALUSrcB": 0,
+            "MemtoReg": 0,
             "RegWrite": 0,
             "MemRead": 0,
             "MemWrite": 0,
@@ -155,7 +155,7 @@ def control_unit(opcode: int):
     elif opcode == 0b1101111:  # JAL
         logger.debug(f"Opcode: {opcode} (JAL)")
         control_signals.update({
-            "ALUSrc": 0,
+            "ALUSrcB": 0b01,
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
@@ -226,17 +226,17 @@ def imm_gen(opcode: int, instr: int) -> int:
         logger.debug(f"Immediate: 0 (No Imm)")
         return 0 # Default immediate (shouldn't reach here for valid instructions)
 
-def multiplexer(a, b, select):
+def multiplexer(select, *inputs):
     """
     Multiplexes between two inputs based on the select signal.
 
-    :param select: If 0, output `a`. If 1, output `b`.
+    :param select: An integer to choose the output, ranging from 0 to len(inputs) - 1.
+    :param inputs: A variable number of input values.
     :return: The selected input based on the select signal.
     """
-    if select == 0:
-        return a
-    else:
-        return b
+    if select < 0 or select >= len(inputs):
+        raise ValueError("Select signal must be within the range of available inputs.")
+    return inputs[select]
 
 def and_gate(a, b):
     return a & b
