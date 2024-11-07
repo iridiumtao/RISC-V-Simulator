@@ -99,6 +99,7 @@ def xor_gate(a, b):
 
 def control_unit(opcode: int):
     control_signals = {
+        "JAL": 0,
         "ALUSrcA": 0,
         "ALUSrcB": 0b00,
         "MemtoReg": 0,
@@ -174,13 +175,14 @@ def control_unit(opcode: int):
     elif opcode == 0b1101111:  # JAL
         logger.debug(f"Opcode: {opcode} (JAL)")
         control_signals.update({
-            "ALUSrcB": 0b01,
+            "JAL": 1,
+            "ALUSrcB": 0b10,
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
             "MemWrite": 0,
             "Branch": 0,
-            "ALUOp": 0
+            "ALUOp": 0b10
         })
     elif opcode == 0b1111111:  # HALT
         logger.debug(f"Opcode: {opcode} (HALT)")

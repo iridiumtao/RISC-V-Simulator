@@ -5,7 +5,8 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
-from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, xor_gate
+from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, \
+    xor_gate, or_gate
 
 
 class Core(object):
@@ -84,6 +85,7 @@ class SingleStageCore(Core):
         self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
 
         branch = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
+        jal = control_signals["JAL"]
         self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
         self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
 
@@ -163,8 +165,8 @@ class SingleStageCore(Core):
 
         # PC handling
         ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
-        # Branch handling, BEQ, BNE handling
-        pc_src = and_gate(branch, xor_gate(zero, bne_func))
+        # Branch handling, BEQ, BNE handling, JAL handling
+        pc_src = or_gate(jal, and_gate(branch, xor_gate(zero, bne_func)))
         print(f"pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
         program_counter = multiplexer(pc_src, if_pc_adder_result, ex_pc_adder_result)
         print(f"PC: {program_counter}")
