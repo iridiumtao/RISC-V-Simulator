@@ -28,19 +28,19 @@ def alu_control_unit(alu_op, func_code):
     elif alu_op == 0b10:
         if func_code == 0b0000:
             alu_control = 0b0010  # ADD
-            logger.debug(f"ALU Control: {alu_control} (ADD)")
+            logger.info(f"ALU Control: {alu_control} (ADD)")
         elif func_code == 0b1000:
             alu_control = 0b0110  # SUB
-            logger.debug(f"ALU Control: {alu_control} (SUB)")
+            logger.info(f"ALU Control: {alu_control} (SUB)")
         elif func_code == 0b0111:
             alu_control = 0b0000  # AND
-            logger.debug(f"ALU Control: {alu_control} (AND)")
+            logger.info(f"ALU Control: {alu_control} (AND)")
         elif func_code == 0b0110:
             alu_control = 0b0001  # OR
-            logger.debug(f"ALU Control: {alu_control} (OR)")
+            logger.info(f"ALU Control: {alu_control} (OR)")
         elif func_code == 0b0100:
             alu_control = 0b0111  # XOR
-            logger.debug(f"ALU Control: {alu_control} (XOR)")
+            logger.info(f"ALU Control: {alu_control} (XOR)")
         else:
             alu_control = 0b1111  # Should not happen
             logger.error(f"ALU Control: {alu_control} (Undefined)")
@@ -75,12 +75,11 @@ def arithmetic_logic_unit(alu_control, a, b):
 
     # Zero is True if alu_result is 0
     zero = (alu_result == 0)
-    not_equal = (alu_result != 0)  # For BNE instruction
 
-    logger.debug(f"ALU Input: {a}, {b}")
-    logger.debug(f"ALU Result: {alu_result}, Zero: {zero}, Not Equal: {not_equal}")
+    logger.info(f"ALU Input: {a}, {b}")
+    logger.info(f"ALU Result: {alu_result}, Zero: {zero}")
 
-    return zero, not_equal, alu_result
+    return zero, alu_result
 
 
 def adder(a, b):
@@ -227,7 +226,6 @@ def imm_gen(opcode: int, instr: int) -> int:
                (instr >> 25 & 0b111111) << 5 |  # imm[10:5]
                (instr >> 8 & 0b1111) << 1)  # imm[4:1]
 
-        logger.error(f"B-type Immediate0: {imm:032b} ({imm})")
         if imm & 0x1000:  # Check if sign bit (bit 12) is set
             imm |= 0xFFFFE000  # Sign extend to 32 bits
         logger.debug(f"B-type Immediate: {imm:032b} ({imm})")

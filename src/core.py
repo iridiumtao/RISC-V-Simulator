@@ -157,21 +157,21 @@ class SingleStageCore(Core):
                                        alu_control_func_code)
 
         # ALU control 4-bit
-        zero, not_equal, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
+        zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
             alu_control=alu_control,
             a=alu_input_a,
             b=alu_input_b)
 
         bne_func = (alu_control_func_code & 0x1)
-        print(f"alu_control_func_code: {alu_control_func_code}, bne_func: {bne_func}")
+        logger.debug(f"PC Handling debug: alu_control_func_code: {alu_control_func_code}, bne_func: {bne_func}")
 
         # PC handling
         ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
         # Branch handling, BEQ, BNE handling, JAL handling
         pc_src = or_gate(jal, and_gate(branch, xor_gate(zero, bne_func)))
-        print(f"pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
+        logger.debug(f"PC Handling debug: pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
         program_counter = multiplexer(pc_src, if_pc_adder_result, ex_pc_adder_result)
-        print(f"PC: {program_counter}")
+        logger.debug(f"PC Handling debug: PC: {program_counter}")
 
         # --------------------- MEM stage --------------------
         logger.debug(f"--------------------- MEM stage ")
@@ -214,7 +214,7 @@ class SingleStageCore(Core):
 
         # ----------------------- End ------------------------
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
-        logger.opt(colors=True).debug(
+        logger.opt(colors=True).info(
             f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle + 1} cycle ↓ --------------</green>")
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
 
