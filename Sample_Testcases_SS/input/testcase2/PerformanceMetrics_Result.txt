@@ -1,5 +1,6 @@
 Single Stage Core Performance Metrics
 Number of cycles taken: 28
+Total Number of Instructions: 27
 Cycles per instruction: 1.03704
 Instructions per cycle: 0.964286
 
