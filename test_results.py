@@ -14,7 +14,6 @@ def compare_files(testcases, filenames):
             new_path.parent.mkdir(parents=True, exist_ok=True)
             old_path.rename(new_path)
 
-
         # Run tests
         input_path = project_root / 'Sample_Testcases_SS' / 'input' / testcase
         output_path = project_root / 'Sample_Testcases_SS' / 'output' / testcase
@@ -35,9 +34,9 @@ def compare_files(testcases, filenames):
             else:
                 logger.error(f"{testcase}/{filename}: file not found")
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     'Sample_Testcases_SS/input/testcase0'
     testcase_dirs = ['testcase0', 'testcase1', 'testcase2']  # Add more test cases as needed
-    filenames = ['SS_DMEMResult.txt', 'SS_RFResult.txt','StateResult_SS.txt']  # Add more filenames if necessary
+    filenames = ['SS_DMEMResult.txt', 'SS_RFResult.txt', 'StateResult_SS.txt']  # Add more filenames if necessary
     compare_files(testcase_dirs, filenames)

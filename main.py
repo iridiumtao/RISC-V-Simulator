@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from src.memory import InstructionMemory, DataMemory
 from src.core import SingleStageCore, FiveStageCore
-from src.util import generate_metrics
+from src.generate_metrics import generate_metrics
 from loguru import logger
 import sys
 
@@ -16,7 +16,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ioDir = Path(args.iodir)
-
 
     logger.info(f"List IO Directory: {list(ioDir.iterdir())}")
 
@@ -39,13 +38,13 @@ if __name__ == "__main__":
             break
 
         # test only
-        if ssCore.cycle > 30:
-            logger.error("Single Stage Core is taking too long to execute. Exiting...")
-            break
+        # if ssCore.cycle > 30:
+        #     logger.error("Single Stage Core is taking too long to execute. Exiting...")
+        #     break
 
     # dump SS and FS data mem.
     dmem_ss.output_data_memory()
     dmem_fs.output_data_memory()
 
-    generate_metrics("w", "Single Stage Core Performance Metrics", ssCore.cycle, ssCore.cycle-1, ioDir)
-    generate_metrics("a", "Five Stage Core Performance Metrics", fsCore.cycle, ssCore.cycle-1, ioDir)
+    generate_metrics("w", "Single Stage Core Performance Metrics", ssCore.cycle, ssCore.cycle - 1, ioDir)
+    # generate_metrics("a", "Five Stage Core Performance Metrics", fsCore.cycle, ssCore.cycle-1, ioDir)

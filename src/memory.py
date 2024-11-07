@@ -24,7 +24,7 @@ class InstructionMemory(object):
         # Each line in the files contain a byte of data
         with open(io_dir / "imem.txt") as im:
             self.i_mem = [data.replace("\n", "") for data in im.readlines()]
-            self.i_mem += ["0" * 8] * (1000 - len(self.i_mem))
+            self.i_mem += ["0" * 8] * (MEM_SIZE - len(self.i_mem))
 
 
     def read_instruction(self, read_address: int) -> int:

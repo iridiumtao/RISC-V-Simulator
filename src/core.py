@@ -1,7 +1,6 @@
 from loguru import logger
 from pathlib import Path
 
-from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
@@ -52,7 +51,6 @@ class SingleStageCore(Core):
         # --------------------- IF stage ---------------------
         logger.debug(f"--------------------- IF stage ")
 
-        # TODO: Temporarily. I'll figure out if this is correct
         # "The PC address is incremented by 4 and then written
         # back into the PC to be ready for the next clock cycle. This PC is also saved
         # in the IF/ID pipeline register in case it is needed later for an instruction,
@@ -104,16 +102,17 @@ class SingleStageCore(Core):
 
         # an always true condition so I can collapse the block
         if logger.level("DEBUG"):
-            logger.opt(colors=True).info(f"+-----------------------------+---------------------------------+-----------------------------+")
+            logger.opt(colors=True).info(
+                f"+-----------------------------+---------------------------------+-----------------------------+")
             logger.opt(colors=True).info(f"| Register      | Mem Addr  | \t\t\tValue Bin (Dec) \t\t  |")
-            logger.opt(colors=True).info(f"| Rs / Rd1      | {self.state.EX['Rs']:05b} ({self.state.EX['Rs']}) | {self.state.EX['Read_data1']:032b} ({self.state.EX['Read_data1']}) |")
-            logger.opt(colors=True).info(f"| Rt / Rd2      | {self.state.EX['Rt']:05b} ({self.state.EX['Rt']}) | {self.state.EX['Read_data2']:032b} ({self.state.EX['Read_data2']}) |")
-            logger.opt(colors=True).info(f"| Wrt_reg_addr  | {self.state.EX['Wrt_reg_addr']:05b} ({self.state.EX['Wrt_reg_addr']}) |")
-            logger.opt(colors=True).info(f"+-----------------------------+---------------------------------+-----------------------------+")
-
-
-
-        # todo: Branch/PCSrc, MemtoReg should also be set in this stage, not found in state machine
+            logger.opt(colors=True).info(
+                f"| Rs / Rd1      | {self.state.EX['Rs']:05b} ({self.state.EX['Rs']}) | {self.state.EX['Read_data1']:032b} ({self.state.EX['Read_data1']}) |")
+            logger.opt(colors=True).info(
+                f"| Rt / Rd2      | {self.state.EX['Rt']:05b} ({self.state.EX['Rt']}) | {self.state.EX['Read_data2']:032b} ({self.state.EX['Read_data2']}) |")
+            logger.opt(colors=True).info(
+                f"| Wrt_reg_addr  | {self.state.EX['Wrt_reg_addr']:05b} ({self.state.EX['Wrt_reg_addr']}) |")
+            logger.opt(colors=True).info(
+                f"+-----------------------------+---------------------------------+-----------------------------+")
 
         # Imm Gen
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
@@ -199,8 +198,6 @@ class SingleStageCore(Core):
             logger.debug("Read data")
             data_memory_output = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
 
-
-
         # --------------------- WB stage ---------------------
         logger.debug(f"--------------------- WB stage ")
 
@@ -217,7 +214,8 @@ class SingleStageCore(Core):
 
         # ----------------------- End ------------------------
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
-        logger.opt(colors=True).debug(f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle+1} cycle ↓ --------------</green>")
+        logger.opt(colors=True).debug(
+            f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle + 1} cycle ↓ --------------</green>")
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
 
         # self.halted = True
