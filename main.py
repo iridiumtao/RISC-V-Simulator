@@ -4,8 +4,11 @@ from src.memory import InstructionMemory, DataMemory
 from src.core import SingleStageCore, FiveStageCore
 from src.util import generate_metrics
 from loguru import logger
+import sys
 
 if __name__ == "__main__":
+    # logger.remove()
+    # logger.add(sys.stderr, level="INFO")
 
     # parse arguments for input file location
     parser = argparse.ArgumentParser(description='RV32I processor')
@@ -33,6 +36,11 @@ if __name__ == "__main__":
             fsCore.step()
 
         if ssCore.halted and fsCore.halted:
+            break
+
+        # test only
+        if ssCore.cycle > 30:
+            logger.error("Single Stage Core is taking too long to execute. Exiting...")
             break
 
     # dump SS and FS data mem.

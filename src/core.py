@@ -5,7 +5,7 @@ from src.decoder import InstructionDecoder
 from src.register_file import RegisterFile
 from src.state import State
 from src.memory import InstructionMemory, DataMemory
-from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate
+from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, xor_gate
 
 
 class Core(object):
@@ -153,16 +153,21 @@ class SingleStageCore(Core):
                                        alu_control_func_code)
 
         # ALU control 4-bit
-        zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
+        zero, not_equal, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
             alu_control=alu_control,
             a=self.state.EX["Read_data1"],
             b=alu_input_b)
 
+        bne_func = (alu_control_func_code & 0x1)
+        print(f"alu_control_func_code: {alu_control_func_code}, bne_func: {bne_func}")
+
         # PC handling
         ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
-        # Branch handling
-        pc_src = and_gate(branch, zero)
+        # Branch handling, BEQ, BNE handling
+        pc_src = and_gate(branch, xor_gate(zero, bne_func))
+        print(f"pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
         program_counter = multiplexer(pc_src, if_pc_adder_result, ex_pc_adder_result)
+        print(f"PC: {program_counter}")
 
         # --------------------- MEM stage --------------------
         logger.debug(f"--------------------- MEM stage ")
