@@ -163,7 +163,7 @@ def control_unit(opcode: int):
     elif opcode == 0b1100011:  # Branch
         logger.debug(f"Opcode: {opcode} (Branch)")
         control_signals.update({
-            "ALUSrcA": 1,
+            "ALUSrcA": 0,
             "ALUSrcB": 0,
             "MemtoReg": 0,
             "RegWrite": 0,
@@ -176,7 +176,8 @@ def control_unit(opcode: int):
         logger.debug(f"Opcode: {opcode} (JAL)")
         control_signals.update({
             "JAL": 1,
-            "ALUSrcB": 0b10,
+            "ALUSrcA": 1,
+            "ALUSrcB": 0b1,
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,

@@ -83,6 +83,7 @@ class SingleStageCore(Core):
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
+        alu_src_a = control_signals["ALUSrcA"]
 
         branch = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
         jal = control_signals["JAL"]
@@ -146,6 +147,8 @@ class SingleStageCore(Core):
                                   4,
                                   self.state.EX["Imm"])  # extract the least significant bit
 
+        alu_input_a = multiplexer(alu_src_a, self.state.EX["Read_data1"], program_counter)
+
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
         # add (00) for loads and stores, subtract and
@@ -157,7 +160,7 @@ class SingleStageCore(Core):
         # ALU control 4-bit
         zero, not_equal, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
             alu_control=alu_control,
-            a=self.state.EX["Read_data1"],
+            a=alu_input_a,
             b=alu_input_b)
 
         bne_func = (alu_control_func_code & 0x1)
