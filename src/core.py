@@ -329,7 +329,6 @@ class FiveStageCore(Core):
 
         write_register = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
 
-
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
@@ -349,7 +348,6 @@ class FiveStageCore(Core):
         self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
         self.state.EX["PC"] = self.state.ID["PC"]
-
 
         """Register File"""
         # Ref: Comp.Org P.282.e5 Figure e4.5.4
@@ -383,10 +381,9 @@ class FiveStageCore(Core):
         self.state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
 
         """Passing data to subsequent pipeline registers"""
-        self.state.MEM["Rs"] = self.state.EX["Rs"] # todo: ?
-        self.state.MEM["Rt"] = self.state.EX["Rt"] # todo: ?
+        self.state.MEM["Rs"] = self.state.EX["Rs"]  # todo: ?
+        self.state.MEM["Rt"] = self.state.EX["Rt"]  # todo: ?
         self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
-
 
         """Passing control signal to subsequent pipeline registers"""
         # (see Comp.Org p.313 Figure 4.52)
@@ -396,11 +393,11 @@ class FiveStageCore(Core):
         self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
         self.state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
 
-
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
                                   self.state.EX["Read_data2"],
-                                  4,
+                                  4, # todo: this is very weird, unnecessary
                                   self.state.EX["Imm"])  # extract the least significant bit
+        # todo: to be deleted, replaced with an dedicated Adder.
         alu_input_a = multiplexer(alu_src_a, self.state.EX["Read_data1"], program_counter)
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
@@ -415,9 +412,8 @@ class FiveStageCore(Core):
             a=alu_input_a,
             b=alu_input_b)
         bne_func = (self.state.EX["alu_control_func"] & 0x1)
-        logger.debug(f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
-        # PC handling
-        ex_pc_adder_result = adder(program_counter, self.state.EX["Imm"])
+        logger.debug(
+            f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
 
 
     def mem_stage(self):
@@ -438,7 +434,7 @@ class FiveStageCore(Core):
         self.state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
 
         self.mem_stage_pc_result = self.state.MEM["PC"]
-        """Branch condition""" # todo: rewrite
+        """Branch condition"""  # todo: rewrite
         # Branch handling, BEQ, BNE handling, JAL handling
         self.pc_src = or_gate(jal, and_gate(branch, xor_gate(zero, bne_func)))
         logger.debug(f"PC Handling debug: pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
@@ -469,8 +465,6 @@ class FiveStageCore(Core):
                                                self.state.WB["Wrt_data"])
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], register_file_write_data)
-
-
 
     def logger_instruction(self):
         logger.debug(f"Instruction: +.....-+...-+...-+.-+...-+.....-")
