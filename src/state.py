@@ -9,22 +9,25 @@ class State(object):
         "Instruction fetch: The control signals to read instruction memory and to write the PC are always asserted, so there is nothing special to control in this pipeline stage." Comp.Org P.331
         """
 
-        self.ID = {"nop": False, "Instr": 0}
+        self.ID = {"nop": False, "Instr": 0, "PC": 0}
         """ Corresponding IF/ID Pipeline register
                  
-        { nop: No Operation, Instr: 32 bit binary Instruction stores in int}
+        { nop: No Operation, 
+        Instr: 32 bit binary Instruction stores in int,
+        * PC: Program Counter }
         
         "Instruction decode/register file read: The two source registers are always in the same location in the RISC-V instruction formats, so there is nothing special to control in this pipeline stage."  Comp.Org P.331
         """
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
-                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0}
+                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0}
         """ ID/EX Pipeline register
         
         "Execution/address calculation: The signals to be set are ALUOp and ALUSrc (see Figures 4.49 and 4.50). The signals select the ALU operation and either Read data 2 or a sign-extended immediate as inputs to the ALU."  Comp.Org P.331
                 
         { nop: No Operation, 
+          * PC: Program Counter,
         
           Rs: ID Register input: rs1, 
           Rt: ID Register input: rs2,
@@ -35,12 +38,15 @@ class State(object):
           Imm: ID Imm Gen output, 
           
           Wrt_reg_addr: ID Register input: Write register (from WB stage),
+          
+          * ALU_control_func: 4 bits ALU Control opcode,
 
           alu_op: 2 bits EX Control: ALUOp (connect to ALU control),
           is_I_type: 2 bits EX Control: ALUSrc, 
 
           rd_mem: 1 bit MEM Control: MemRead, 
           wrt_mem: 1 bit MEM Control: MemWrite,
+          * branch: ? bit MEM Control: Branch
           
           wrt_enable: 1 bit WB Control: RegWrite,
           * mem_to_reg: 1 bit WB Control: MemtoReg
@@ -48,12 +54,13 @@ class State(object):
         }"""
 
         self.MEM = {"nop": False, "ALUresult": 0, "Store_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "rd_mem": 0,
-                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0}
+                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0}
         """ EX/MEM Pipeline register
         
         "Memory access: The control lines set in this stage are Branch, MemRead, and MemWrite. The branch if equal, load, and store instructions set these signals, respectively. Recall that PCSrc in Figure 4.50 selects the next sequential address unless control asserts Branch and the ALU result was 0." Comp.Org P.331
                 
         { nop: No Operation, 
+          * PC: Program Counter,
         
           Rs: ID Register input: rs1, 
           Rt: ID Register input: rs2,
