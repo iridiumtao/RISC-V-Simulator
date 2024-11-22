@@ -28,23 +28,26 @@ if __name__ == "__main__":
     fsCore = FiveStageCore(ioDir, imem, dmem_fs)
 
     while (True):
-        if not ssCore.halted:
-            ssCore.step()
+        # if not ssCore.halted:
+        #     ssCore.step()
 
         if not fsCore.halted:
             fsCore.step()
 
-        if ssCore.halted and fsCore.halted:
+        # if ssCore.halted and fsCore.halted:
+        #     break
+
+        if fsCore.halted:
             break
 
         # test only
-        # if ssCore.cycle > 30:
-        #     logger.error("Single Stage Core is taking too long to execute. Exiting...")
-        #     break
+        if fsCore.cycle > 30:
+            logger.error("Single Stage Core is taking too long to execute. Exiting...")
+            break
 
     # dump SS and FS data mem.
     dmem_ss.output_data_memory()
     dmem_fs.output_data_memory()
 
-    generate_metrics("w", "Single Stage Core Performance Metrics", ssCore.cycle, ssCore.cycle - 1, ioDir)
+    # generate_metrics("w", "Single Stage Core Performance Metrics", ssCore.cycle, ssCore.cycle - 1, ioDir)
     # generate_metrics("a", "Five Stage Core Performance Metrics", fsCore.cycle, ssCore.cycle-1, ioDir)

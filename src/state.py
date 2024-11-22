@@ -21,7 +21,7 @@ class State(object):
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
-                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0}
+                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0, "jal": 0}
         """ ID/EX Pipeline register
         
         "Execution/address calculation: The signals to be set are ALUOp and ALUSrc (see Figures 4.49 and 4.50). The signals select the ALU operation and either Read data 2 or a sign-extended immediate as inputs to the ALU."  Comp.Org P.331
@@ -39,14 +39,15 @@ class State(object):
           
           Wrt_reg_addr: ID Register input: Write register (from WB stage),
           
-          * ALU_control_func: 4 bits ALU Control opcode,
+          * alu_control_func: 4 bits ALU Control opcode,
 
           alu_op: 2 bits EX Control: ALUOp (connect to ALU control),
           is_I_type: 2 bits EX Control: ALUSrc, 
 
           rd_mem: 1 bit MEM Control: MemRead, 
           wrt_mem: 1 bit MEM Control: MemWrite,
-          * branch: ? bit MEM Control: Branch
+          * branch: 1 bit MEM Control: Branch,
+          * jal: 1 bit MEM Control: Jump and Link Instruction flag,
           
           wrt_enable: 1 bit WB Control: RegWrite,
           * mem_to_reg: 1 bit WB Control: MemtoReg
@@ -54,7 +55,7 @@ class State(object):
         }"""
 
         self.MEM = {"nop": False, "ALUresult": 0, "Store_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "rd_mem": 0,
-                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0}
+                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0, "ALUZero": 0, "bne": 0, "branch": 0, "jal": 0}
         """ EX/MEM Pipeline register
         
         "Memory access: The control lines set in this stage are Branch, MemRead, and MemWrite. The branch if equal, load, and store instructions set these signals, respectively. Recall that PCSrc in Figure 4.50 selects the next sequential address unless control asserts Branch and the ALU result was 0." Comp.Org P.331
@@ -66,19 +67,19 @@ class State(object):
           Rt: ID Register input: rs2,
           Wrt_reg_addr: ID Register input: Write register,
           
+          * ALUZero: ALU zero output,
           ALUresult: ALU output,
           Store_data: (*maybe*) ID Register output: Read register 2 (rd2),
           
-          Imm: Imm Gen output, 
-          
-          alu_op: 2 bits Control line output: ALUOp (connect to ALU control),
-          is_I_type: 2 bits Control unit output: ALUSrc, 
+          * bne: Branch Not Equal instruction flag, derived from alu_control_func,
 
-          rd_mem: 1 bit Control unit output: MemRead, 
-          wrt_mem: 1 bit Control unit output: MemWrite,
+          rd_mem: 1 bit MEM Control: MemRead, 
+          wrt_mem: 1 bit MEM Control: MemWrite,
+          * branch: 1 bit MEM Control: Branch,
+          * jal: 1 bit MEM Control: Jump and Link Instruction flag
           
-          wrt_enable: 1 bit Control unit output: RegWrite,
-          * mem_to_reg: 1 bit Control unit output: MemtoReg}"""
+          wrt_enable: 1 bit WB Control: RegWrite,
+          * mem_to_reg: 1 bit WB Control: MemtoReg}"""
 
         self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0, "ALUresult": 0}
         """ MEM/WB Pipeline register

@@ -312,7 +312,7 @@ class FiveStageCore(Core):
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
-        if self.state.ID["NOP"]:
+        if self.state.ID["nop"]:
             logger.info(f"ID stage No Operation")
             return
 
@@ -373,7 +373,7 @@ class FiveStageCore(Core):
 
     def ex_stage(self):
         logger.debug(f"--------------------- EX stage ")
-        if self.state.EX["NOP"]:
+        if self.state.EX["nop"]:
             logger.info(f"EX stage No Operation")
             return
 
@@ -395,10 +395,9 @@ class FiveStageCore(Core):
 
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
                                   self.state.EX["Read_data2"],
-                                  4, # todo: this is very weird, unnecessary
+                                  4, # unnecessary. but we keep this for compatibility
                                   self.state.EX["Imm"])  # extract the least significant bit
-        # todo: to be deleted, replaced with an dedicated Adder.
-        alu_input_a = multiplexer(alu_src_a, self.state.EX["Read_data1"], program_counter)
+
         # ALUOp 2-bit, generated from the Main Control Unit
         # indicates whether the operation to be performed should be
         # add (00) for loads and stores, subtract and
@@ -409,16 +408,18 @@ class FiveStageCore(Core):
         # ALU control 4-bit
         zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
             alu_control=alu_control,
-            a=alu_input_a,
+            a=self.state.EX["Read_data1"],
             b=alu_input_b)
         bne_func = (self.state.EX["alu_control_func"] & 0x1)
         logger.debug(
             f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
+        self.state.MEM["bne"] = bne_func
+        self.state.MEM["ALUZero"] = zero
 
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
-        if self.state.MEM["NOP"]:
+        if self.state.MEM["nop"]:
             logger.info(f"MEM stage No Operation")
             return
 
@@ -436,8 +437,8 @@ class FiveStageCore(Core):
         self.mem_stage_pc_result = self.state.MEM["PC"]
         """Branch condition"""  # todo: rewrite
         # Branch handling, BEQ, BNE handling, JAL handling
-        self.pc_src = or_gate(jal, and_gate(branch, xor_gate(zero, bne_func)))
-        logger.debug(f"PC Handling debug: pc_src: {pc_src}, branch: {branch}, zero: {zero}, bne_func: {bne_func}")
+        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"], xor_gate(self.state.MEM["ALUZero"], self.state.MEM["bne"])))
+        logger.debug(f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
         program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
         logger.debug(f"PC Handling debug: Next PC: {program_counter}")
         # next PC

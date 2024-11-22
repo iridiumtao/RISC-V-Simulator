@@ -1,9 +1,10 @@
 ----------------------------------------------------------------------
 State after executing cycle: 0
 IF.nop: False
-IF.PC: 0
+IF.PC: None
 ID.nop: False
 ID.Instr: 0
+ID.PC: 0
 EX.nop: False
 EX.Read_data1: 0
 EX.Read_data2: 0
@@ -16,6 +17,11 @@ EX.rd_mem: 0
 EX.wrt_mem: 0
 EX.alu_op: 0
 EX.wrt_enable: 0
+EX.mem_to_reg: 0
+EX.PC: 0
+EX.alu_control_func: 0
+EX.branch: 0
+EX.jal: 0
 MEM.nop: False
 MEM.ALUresult: 0
 MEM.Store_data: 0
@@ -25,9 +31,17 @@ MEM.Wrt_reg_addr: 0
 MEM.rd_mem: 0
 MEM.wrt_mem: 0
 MEM.wrt_enable: 0
+MEM.mem_to_reg: 0
+MEM.PC: 0
+MEM.ALUZero: 0
+MEM.bne: 0
+MEM.branch: 0
+MEM.jal: 0
 WB.nop: False
 WB.Wrt_data: 0
 WB.Rs: 0
 WB.Rt: 0
 WB.Wrt_reg_addr: 0
 WB.wrt_enable: 0
+WB.mem_to_reg: 0
+WB.ALUresult: 0

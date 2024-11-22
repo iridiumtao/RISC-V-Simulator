@@ -114,7 +114,6 @@ def control_unit(opcode: int):
     if opcode == 0b0110011:  # R-type
         logger.debug(f"Opcode: {opcode} (R-type)")
         control_signals.update({
-            "ALUSrcA": 0,
             "ALUSrcB": 0,
             "MemtoReg": 0,
             "RegWrite": 1,
@@ -126,7 +125,6 @@ def control_unit(opcode: int):
     elif opcode == 0b0010011:  # I-type
         logger.debug(f"Opcode: {opcode} (I-type)")
         control_signals.update({
-            "ALUSrcA": 0,
             "ALUSrcB": 0b10,
             "MemtoReg": 0,
             "RegWrite": 1,
@@ -138,7 +136,6 @@ def control_unit(opcode: int):
     elif opcode == 0b0000011:  # Load
         logger.debug(f"Opcode: {opcode} (Load)")
         control_signals.update({
-            "ALUSrcA": 0,
             "ALUSrcB": 0b10,
             "MemtoReg": 1,
             "RegWrite": 1,
@@ -150,7 +147,6 @@ def control_unit(opcode: int):
     elif opcode == 0b0100011:  # Store
         logger.debug(f"Opcode: {opcode} (Store)")
         control_signals.update({
-            "ALUSrcA": 0,
             "ALUSrcB": 0b10,
             "MemtoReg": 0,
             "RegWrite": 0,
@@ -162,7 +158,6 @@ def control_unit(opcode: int):
     elif opcode == 0b1100011:  # Branch
         logger.debug(f"Opcode: {opcode} (Branch)")
         control_signals.update({
-            "ALUSrcA": 0,
             "ALUSrcB": 0,
             "MemtoReg": 0,
             "RegWrite": 0,
