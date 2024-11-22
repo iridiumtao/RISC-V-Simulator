@@ -254,9 +254,9 @@ class SingleStageCore(Core):
 
 
 class FiveStageCore(Core):
-    if_stage_pc_result = None
-    mem_stage_pc_result = None
-    pc_src = None
+    if_stage_pc_result = 0
+    mem_stage_pc_result = 0
+    pc_src = 0
 
     def __init__(self, io_dir, instruction_memory, data_memory):
         super(FiveStageCore, self).__init__(io_dir / "FS_", instruction_memory, data_memory)
@@ -286,7 +286,6 @@ class FiveStageCore(Core):
 
         # ----------------------- End ------------------------
 
-        self.halted = True
         if self.state.IF["nop"] and self.state.ID["nop"] and self.state.EX["nop"] and self.state.MEM["nop"] and \
                 self.state.WB["nop"]:
             self.halted = True
@@ -309,6 +308,11 @@ class FiveStageCore(Core):
         self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
             self.state.IF["PC"])
         self.logger_instruction()
+
+        program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
+        logger.debug(f"PC Handling debug: Next PC: {program_counter}")
+        # next PC
+        self.nextState.IF["PC"] = program_counter
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
@@ -334,12 +338,13 @@ class FiveStageCore(Core):
         if halt:
             # todo: rework for halt
             self.state.IF["nop"] = True
+            self.state.ID["nop"] = True
+            self.state.EX["nop"] = True
+            self.state.MEM["nop"] = True
+            self.state.WB["nop"] = True
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
-        # todo: revise ALUSrcA
-        alu_src_a = control_signals["ALUSrcA"]
-        # todo: revise Branch and JAL with BNE instruction, maybe 2 bit branch to include BNE cond an JAL?
         self.state.EX["branch"] = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
         jal = control_signals["JAL"]
         self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
@@ -439,10 +444,7 @@ class FiveStageCore(Core):
         # Branch handling, BEQ, BNE handling, JAL handling
         self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"], xor_gate(self.state.MEM["ALUZero"], self.state.MEM["bne"])))
         logger.debug(f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
-        program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
-        logger.debug(f"PC Handling debug: Next PC: {program_counter}")
-        # next PC
-        self.nextState.IF["PC"] = program_counter
+
 
         """Data Memory Unit"""
         if self.state.MEM["wrt_mem"] == 1:

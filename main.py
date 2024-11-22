@@ -9,6 +9,7 @@ import sys
 if __name__ == "__main__":
     # logger.remove()
     # logger.add(sys.stderr, level="INFO")
+    # logger.add(sys.stderr, level="DEBUG", backtrace=True, diagnose=True)
 
     # parse arguments for input file location
     parser = argparse.ArgumentParser(description='RV32I processor')
