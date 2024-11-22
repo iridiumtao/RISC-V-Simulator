@@ -336,7 +336,7 @@ class FiveStageCore(Core):
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
-            # todo: rework for halt
+            # todo: potentially missing "halt on next cycle"
             self.state.IF["nop"] = True
             self.state.ID["nop"] = True
             self.state.EX["nop"] = True
@@ -366,7 +366,6 @@ class FiveStageCore(Core):
         # special ALU handling, if I-type, omit the func7 bit
         # I didn't find this in the book, without this, ALU cannot work on I-type
         if opcode == 19:  # I-type
-            # todo: alu_control_func_code
             alu_control_func_code = alu_control_func_code & 0b111
         self.state.EX["alu_control_func"] = alu_control_func_code
         self.state.EX["Wrt_reg_addr"] = write_register
@@ -440,7 +439,7 @@ class FiveStageCore(Core):
         self.state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
 
         self.mem_stage_pc_result = self.state.MEM["PC"]
-        """Branch condition"""  # todo: rewrite
+        """Branch condition"""
         # Branch handling, BEQ, BNE handling, JAL handling
         self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"], xor_gate(self.state.MEM["ALUZero"], self.state.MEM["bne"])))
         logger.debug(f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
