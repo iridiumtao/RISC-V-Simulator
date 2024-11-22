@@ -194,7 +194,6 @@ def control_unit(opcode: int):
 
     return control_signals, halt
 
-
 def imm_gen(opcode: int, instr: int) -> int:
     """
     Generate the immediate value based on the opcode and instruction.

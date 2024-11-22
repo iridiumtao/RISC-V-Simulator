@@ -19,7 +19,7 @@ class State(object):
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
-                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0}
+                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0}
         """ ID/EX Pipeline register
         
         "Execution/address calculation: The signals to be set are ALUOp and ALUSrc (see Figures 4.49 and 4.50). The signals select the ALU operation and either Read data 2 or a sign-extended immediate as inputs to the ALU."  Comp.Org P.331
@@ -28,25 +28,27 @@ class State(object):
         
           Rs: ID Register input: rs1, 
           Rt: ID Register input: rs2,
-          Wrt_reg_addr: ID Register input: Write register,
           
           Read_data1: ID Register output: Read register 1 (rd1), 
           Read_data2: ID Register output: Read register 2 (rd2), 
           
-          Imm: Imm Gen output, 
+          Imm: ID Imm Gen output, 
           
-          alu_op: 2 bits Control line output: ALUOp (connect to ALU control),
-          is_I_type: 2 bits Control unit output: ALUSrc, 
+          Wrt_reg_addr: ID Register input: Write register (from WB stage),
 
-          rd_mem: 1 bit Control unit output: MemRead, 
-          wrt_mem: 1 bit Control unit output: MemWrite,
+          alu_op: 2 bits EX Control: ALUOp (connect to ALU control),
+          is_I_type: 2 bits EX Control: ALUSrc, 
+
+          rd_mem: 1 bit MEM Control: MemRead, 
+          wrt_mem: 1 bit MEM Control: MemWrite,
           
-          wrt_enable: 1 bit Control unit output: RegWrite
+          wrt_enable: 1 bit WB Control: RegWrite,
+          * mem_to_reg: 1 bit WB Control: MemtoReg
 
         }"""
 
         self.MEM = {"nop": False, "ALUresult": 0, "Store_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "rd_mem": 0,
-                    "wrt_mem": 0, "wrt_enable": 0}
+                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0}
         """ EX/MEM Pipeline register
         
         "Memory access: The control lines set in this stage are Branch, MemRead, and MemWrite. The branch if equal, load, and store instructions set these signals, respectively. Recall that PCSrc in Figure 4.50 selects the next sequential address unless control asserts Branch and the ALU result was 0." Comp.Org P.331
@@ -68,20 +70,23 @@ class State(object):
           rd_mem: 1 bit Control unit output: MemRead, 
           wrt_mem: 1 bit Control unit output: MemWrite,
           
-          wrt_enable: 1 bit Control unit output: RegWrite }"""
+          wrt_enable: 1 bit Control unit output: RegWrite,
+          * mem_to_reg: 1 bit Control unit output: MemtoReg}"""
 
-        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0}
+        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0, "ALUresult": 0}
         """ MEM/WB Pipeline register
          
          "Write-back: The two control lines are MemtoReg, which decides between sending the ALU result or the memory value to the register file, and RegWrite, which writes the chosen value." Comp.Org P.331
                  
         { nop: No Operation
         
-          Wrt_data: WB MUX output, write back to register file,
+          Wrt_data: Data Memory Output "Read data", this value or ALUresult is written to the register file via "write data" wire,
+          * ALUresult: ALU output,
         
           Rs: ID Register input: rs1, 
           Rt: ID Register input: rs2,
           Wrt_reg_addr: ID Register input: Write register,
           
-          wrt_enable: 1 bit Control unit output: RegWrite 
+          wrt_enable: 1 bit Control unit output: RegWrite, 
+          * mem_to_reg: 1 bit Control unit output: MemtoReg
         }"""
