@@ -266,7 +266,7 @@ class FiveStageCore(Core):
         # Your implementation
         # --------------------- WB stage ---------------------
 
-        self.wb_stage()
+        # self.wb_stage()
 
         # --------------------- MEM stage --------------------
 
@@ -290,10 +290,15 @@ class FiveStageCore(Core):
                 self.state.WB["nop"]:
             self.halted = True
 
-        self.register_file.output(self.cycle)  # dump RF
-        self.printState(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
+        logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
+        logger.opt(colors=True).info(
+            f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle + 1} cycle ↓ --------------</green>")
+        logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
 
-        self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
+        self.register_file.output(self.cycle)  # dump RF
+        self.printState(self.state, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
+
+        # self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
         self.cycle += 1
 
     def if_stage(self):
@@ -312,10 +317,11 @@ class FiveStageCore(Core):
         program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
         logger.debug(f"PC Handling debug: Next PC: {program_counter}")
         # next PC
-        self.nextState.IF["PC"] = program_counter
+        self.state.IF["PC"] = program_counter
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
+        logger.info(f"state: {self.state.ID}")
         if self.state.ID["nop"]:
             logger.info(f"ID stage No Operation")
             return
