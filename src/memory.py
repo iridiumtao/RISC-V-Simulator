@@ -87,6 +87,9 @@ class DataMemory(object):
             write_data (int): The 32-bit binary data to write in integer format.
         """
         # Convert the integer write_data to a 32-bit binary string
+        if address < 0 or address >= MEM_SIZE:
+            logger.error(f"Invalid address: {address}")
+            return
         logger.debug(f"Writing data {write_data} to address {address}")
 
         # Handle negative two's complement conversion

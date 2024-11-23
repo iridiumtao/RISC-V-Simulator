@@ -257,16 +257,23 @@ class FiveStageCore(Core):
     if_stage_pc_result = 0
     mem_stage_pc_result = 0
     pc_src = 0
+    halt_detected = False
 
     def __init__(self, io_dir, instruction_memory, data_memory):
         super(FiveStageCore, self).__init__(io_dir / "FS_", instruction_memory, data_memory)
         self.opFilePath = io_dir / "StateResult_FS.txt"
 
     def step(self):
+        if (self.halt_detected and
+            self.state.ID["nop"] and
+            self.state.EX["nop"] and
+            self.state.MEM["nop"] and
+            self.state.WB["nop"]):
+            self.halted = True
         # Your implementation
         # --------------------- WB stage ---------------------
 
-        # self.wb_stage()
+        self.wb_stage()
 
         # --------------------- MEM stage --------------------
 
@@ -282,13 +289,14 @@ class FiveStageCore(Core):
 
         # --------------------- IF stage ---------------------
 
-        self.if_stage()
+        # Only fetch new instructions if HALT hasn't been detected
+        if not self.halt_detected:
+            self.if_stage()
+        else:
+            self.state.IF["nop"] = True
 
         # ----------------------- End ------------------------
 
-        if self.state.IF["nop"] and self.state.ID["nop"] and self.state.EX["nop"] and self.state.MEM["nop"] and \
-                self.state.WB["nop"]:
-            self.halted = True
 
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
         logger.opt(colors=True).info(
@@ -303,6 +311,7 @@ class FiveStageCore(Core):
 
     def if_stage(self):
         logger.debug(f"--------------------- IF stage ")
+        logger.info(f"state: {self.state.IF}")
         if self.state.IF["nop"]:
             logger.info(f"IF stage No Operation")
             return
@@ -325,6 +334,9 @@ class FiveStageCore(Core):
         if self.state.ID["nop"]:
             logger.info(f"ID stage No Operation")
             return
+        # This will stop the stage in the next cycle
+        if self.state.IF["nop"] and self.halt_detected:
+            self.state.ID["nop"] = True
 
         """Instruction Fields Extracting"""
         opcode = self.state.ID["Instr"] & 0x7F
@@ -343,11 +355,9 @@ class FiveStageCore(Core):
         control_signals, halt = control_unit(opcode)
         if halt:
             # todo: potentially missing "halt on next cycle"
+            self.halt_detected = True
             self.state.IF["nop"] = True
-            self.state.ID["nop"] = True
-            self.state.EX["nop"] = True
-            self.state.MEM["nop"] = True
-            self.state.WB["nop"] = True
+
         logger.debug(f"Control Signals: {control_signals}")
         self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
         self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
@@ -383,9 +393,13 @@ class FiveStageCore(Core):
 
     def ex_stage(self):
         logger.debug(f"--------------------- EX stage ")
+        logger.info(f"state: {self.state.EX}")
         if self.state.EX["nop"]:
             logger.info(f"EX stage No Operation")
             return
+        # This will stop the stage in the next cycle
+        if self.state.ID["nop"] and self.halt_detected:
+            self.state.EX["nop"] = True
 
         # PC adder
         self.state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
@@ -429,9 +443,13 @@ class FiveStageCore(Core):
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
+        logger.info(f"state: {self.state.MEM}")
         if self.state.MEM["nop"]:
             logger.info(f"MEM stage No Operation")
             return
+        # This will stop the stage in the next cycle
+        if self.state.EX["nop"] and self.halt_detected:
+            self.state.MEM["nop"] = True
 
         """Passing data to subsequent pipeline registers"""
         self.state.WB["ALUresult"] = self.state.MEM["ALUresult"]
@@ -464,9 +482,14 @@ class FiveStageCore(Core):
 
     def wb_stage(self):
         logger.debug(f"--------------------- WB stage ")
+        logger.info(f"state: {self.state.WB}")
         if self.state.WB["nop"]:
             logger.info(f"WB stage No Operation")
             return
+        # This will stop the stage in the next cycle
+        if self.state.EX["nop"] and self.halt_detected:
+            logger.info(f"WB stage will nop in the next cycle")
+            self.state.WB["nop"] = True
 
         register_file_write_data = multiplexer(self.state.WB["mem_to_reg"],
                                                self.state.WB["ALUresult"],
