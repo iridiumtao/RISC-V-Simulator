@@ -27,7 +27,7 @@ class InstructionMemory(object):
             self.i_mem += ["0" * 8] * (MEM_SIZE - len(self.i_mem))
 
 
-    def read_instruction(self, read_address: int) -> int:
+    def read(self, read_address: int) -> int:
         """
         Read an instruction from the instruction memory.
 
@@ -64,7 +64,7 @@ class DataMemory(object):
             self.d_mem = [data.replace("\n", "") for data in dm.readlines()]
             self.d_mem += ["0" * 8] * (1000 - len(self.d_mem))
 
-    def read_instruction(self, read_address):
+    def read(self, read_address):
         """
         Read data from the data memory.
 
@@ -78,7 +78,7 @@ class DataMemory(object):
         logger.debug(f"Reading data {bin_str} from address {read_address:05b}")
         return int(bin_str, 2)
 
-    def write_data_memory(self, address, write_data):
+    def write(self, address, write_data):
         """
         Write data to the data memory.
 

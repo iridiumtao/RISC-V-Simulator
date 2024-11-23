@@ -60,7 +60,7 @@ class SingleStageCore(Core):
         self.state.ID["nop"] = self.state.IF["nop"]
         logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
 
-        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
+        self.state.ID["Instr"] = self.ext_instruction_memory.read(
             self.state.IF["PC"])
         program_counter = self.state.IF["PC"]
 
@@ -191,13 +191,13 @@ class SingleStageCore(Core):
         # Data Memory Unit
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
-            self.ext_data_memory.write_data_memory(
+            self.ext_data_memory.write(
                 self.state.MEM["ALUresult"],
                 self.state.EX["Read_data2"])
         data_memory_output = None  # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
-            data_memory_output = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+            data_memory_output = self.ext_data_memory.read(self.state.MEM["ALUresult"])
 
         # --------------------- WB stage ---------------------
         logger.debug(f"--------------------- WB stage ")
@@ -310,7 +310,7 @@ class FiveStageCore(Core):
         self.if_stage_pc_result = adder(4, self.state.IF["PC"])
         self.state.ID["PC"] = self.state.IF["PC"]
         logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
-        self.state.ID["Instr"] = self.ext_instruction_memory.read_instruction(
+        self.state.ID["Instr"] = self.ext_instruction_memory.read(
             self.state.IF["PC"])
         self.logger_instruction()
 
@@ -454,13 +454,13 @@ class FiveStageCore(Core):
         """Data Memory Unit"""
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
-            self.ext_data_memory.write_data_memory(
+            self.ext_data_memory.write(
                 self.state.MEM["ALUresult"],
                 self.state.EX["Read_data2"])
         self.state.WB["Wrt_data"] = None  # WB["Wrt_data"] should be a naming error, it should be "Read data"
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
-            self.state.WB["Wrt_data"] = self.ext_data_memory.read_instruction(self.state.MEM["ALUresult"])
+            self.state.WB["Wrt_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
 
     def wb_stage(self):
         logger.debug(f"--------------------- WB stage ")
