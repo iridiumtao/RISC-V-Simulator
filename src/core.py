@@ -372,10 +372,8 @@ class FiveStageCore(Core):
 
         """Register File"""
         # Ref: Comp.Org P.282.e5 Figure e4.5.4
-        self.state.EX["Read_data1"] = self.register_file.read(self.state.EX["Rs"])
-        self.state.EX["Read_data2"] = self.register_file.read(self.state.EX["Rt"])
-
-        self.logger_ALU()
+        self.state.EX["Read_data1"] = self.register_file.read(rs1)
+        self.state.EX["Read_data2"] = self.register_file.read(rs2)
 
         # Imm Gen
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
@@ -390,6 +388,8 @@ class FiveStageCore(Core):
         self.state.EX["Rs"] = rs1
         self.state.EX["Rt"] = rs2
         # todo: potentially missing forward Rd
+
+        self.logger_ALU()
 
     def ex_stage(self):
         logger.debug(f"--------------------- EX stage ")
