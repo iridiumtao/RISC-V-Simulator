@@ -38,6 +38,9 @@ if __name__ == "__main__":
         # if ssCore.halted and fsCore.halted:
         #     break
 
+        # if ssCore.halted:
+        #     break
+
         if fsCore.halted:
             break
 

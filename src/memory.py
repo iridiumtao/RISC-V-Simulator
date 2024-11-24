@@ -107,8 +107,6 @@ class DataMemory(object):
         binary_str = f"{write_data:032b}"
 
         # Write each byte (8 bits) to the memory in order
-        logger.debug(len(self.d_mem))
-        logger.debug(address)
         for i in range(4):
             self.d_mem[address + i] = binary_str[i * 8: (i + 1) * 8]
 
