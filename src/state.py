@@ -81,15 +81,16 @@ class State(object):
           wrt_enable: 1 bit WB Control: RegWrite,
           * mem_to_reg: 1 bit WB Control: MemtoReg}"""
 
-        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0, "ALUresult": 0}
+        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0, "ALUresult": 0, "read_data": 0}
         """ MEM/WB Pipeline register
          
          "Write-back: The two control lines are MemtoReg, which decides between sending the ALU result or the memory value to the register file, and RegWrite, which writes the chosen value." Comp.Org P.331
                  
         { nop: No Operation
         
-          Wrt_data: Data Memory Output "Read data", this value or ALUresult is written to the register file via "write data" wire,
+          * read_data: Data Memory Output "Read data",
           * ALUresult: ALU output,
+          Wrt_data: this value is written to the register file via "write data" wire,
         
           Rs: ID Register input: rs1, 
           Rt: ID Register input: rs2,

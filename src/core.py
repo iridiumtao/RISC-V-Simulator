@@ -4,6 +4,7 @@ from loguru import logger
 
 from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, \
     xor_gate, or_gate
+from src.hazard_handler import forwarding_unit, hazard_detection_unit
 from src.memory import InstructionMemory, DataMemory
 from src.register_file import RegisterFile
 from src.state import State
@@ -404,6 +405,19 @@ class FiveStageCore(Core):
         # PC adder
         self.state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
 
+        """Forwarding Unit"""
+        forward_a, forward_b = forwarding_unit(self.state)
+
+        alu_input_a = multiplexer(forward_a,
+                                  self.state.EX["Read_data1"],
+                                  self.state.MEM["ALUresult"],
+                                  self.state.WB["Wrt_data"])
+        # forwarding unit alu input b
+        alu_input_b = multiplexer(forward_b,
+                                  self.state.EX["Read_data2"],
+                                  self.state.MEM["ALUresult"],
+                                  self.state.WB["Wrt_data"])
+
         """Passing data to subsequent pipeline registers"""
         self.state.MEM["Rs"] = self.state.EX["Rs"]  # todo: ?
         self.state.MEM["Rt"] = self.state.EX["Rt"]  # todo: ?
@@ -418,8 +432,10 @@ class FiveStageCore(Core):
         self.state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
         self.state.MEM["Store_data"] = self.state.EX["Read_data2"]  # ID Register output: Read register 2 (rd2)
 
+
+        # rd2 or imm ALU input b
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
-                                  self.state.EX["Read_data2"],
+                                  alu_input_b,
                                   4, # unnecessary. but we keep this for compatibility
                                   self.state.EX["Imm"])  # extract the least significant bit
 
@@ -433,7 +449,7 @@ class FiveStageCore(Core):
         # ALU control 4-bit
         zero, self.state.MEM["ALUresult"] = arithmetic_logic_unit(
             alu_control=alu_control,
-            a=self.state.EX["Read_data1"],
+            a=alu_input_a,
             b=alu_input_b)
         bne_func = (self.state.EX["alu_control_func"] & 0x1)
         logger.debug(
@@ -465,6 +481,7 @@ class FiveStageCore(Core):
 
         self.mem_stage_pc_result = self.state.MEM["PC"]
         """Branch condition"""
+        # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
         # Branch handling, BEQ, BNE handling, JAL handling
         self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"], xor_gate(self.state.MEM["ALUZero"], self.state.MEM["bne"])))
         logger.debug(f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
@@ -476,10 +493,10 @@ class FiveStageCore(Core):
             self.ext_data_memory.write(
                 self.state.MEM["ALUresult"], # ALU output (Addr (rs1) + imm)
                 self.state.MEM["Store_data"])  # rd2
-        self.state.WB["Wrt_data"] = None  # WB["Wrt_data"] should be a naming error, it should be "Read data"
+        self.state.WB["read_data"] = None
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
-            self.state.WB["Wrt_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
+            self.state.WB["read_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
 
     def wb_stage(self):
         logger.debug(f"--------------------- WB stage ")
@@ -492,11 +509,11 @@ class FiveStageCore(Core):
             logger.info(f"WB stage will nop in the next cycle")
             self.state.WB["nop"] = True
 
-        register_file_write_data = multiplexer(self.state.WB["mem_to_reg"],
+        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
                                                self.state.WB["ALUresult"],
-                                               self.state.WB["Wrt_data"])
+                                               self.state.WB["read_data"])
         if self.state.WB["wrt_enable"] == 1:
-            self.register_file.write(self.state.WB["Wrt_reg_addr"], register_file_write_data)
+            self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 
     def logger_instruction(self):
         logger.debug(f"Instruction: +.....-+...-+...-+.-+...-+.....-")
