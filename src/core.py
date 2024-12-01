@@ -512,6 +512,7 @@ class FiveStageCore(Core):
         self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
                                                self.state.WB["ALUresult"],
                                                self.state.WB["read_data"])
+        logger.debug(f"Write Enable: {bool(self.state.WB['wrt_enable'])}")
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 

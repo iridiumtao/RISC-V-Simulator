@@ -52,6 +52,9 @@ class RegisterFile(object):
         if write_reg_data < 0:
             write_reg_data = (1 << 32) + write_reg_data  # Convert to 2's complement 32-bit
 
+        logger.debug(f"Write Register Address: {reg_addr}")
+        logger.debug(f"Write Data: {write_reg_data:032b}")
+
         self.Registers[reg_addr] = write_reg_data
 
     def output(self, cycle):
