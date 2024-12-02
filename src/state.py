@@ -1,9 +1,13 @@
 class State(object):
     def __init__(self):
-        self.IF = {"nop": False, "PC": 0}
+        self.IF = {"nop": False, "PC": 0, "PCWrite": 0, "IFIDWrite": 0}
         """ Instruction Fetch. Read 4 lines of the IMEM file 
         
-        { nop: No Operation, PC: Program Counter }
+        { nop: No Operation, 
+          PC: Program Counter,
+          * PCWrite: Output of the control unit,
+          * IFIDWrite: Output of the control unit,
+          }
         
         
         "Instruction fetch: The control signals to read instruction memory and to write the PC are always asserted, so there is nothing special to control in this pipeline stage." Comp.Org P.331
@@ -14,7 +18,8 @@ class State(object):
                  
         { nop: No Operation, 
         Instr: 32 bit binary Instruction stores in int,
-        * PC: Program Counter }
+        * PC: Program Counter,
+}
         
         "Instruction decode/register file read: The two source registers are always in the same location in the RISC-V instruction formats, so there is nothing special to control in this pipeline stage."  Comp.Org P.331
         """

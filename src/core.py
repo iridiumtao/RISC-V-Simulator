@@ -317,11 +317,22 @@ class FiveStageCore(Core):
             logger.info(f"IF stage No Operation")
             return
 
-        self.if_stage_pc_result = adder(4, self.state.IF["PC"])
+        # PCWrite from Hazard Detection Unit
+        # if PCWrite is 0, the PC is not updated
+        self.if_stage_pc_result = multiplexer(self.state.IF["PCWrite"],
+                                              self.state.IF["PC"],
+                                              adder(4, self.state.IF["PC"]))
+
         self.state.ID["PC"] = self.state.IF["PC"]
         logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
-        self.state.ID["Instr"] = self.ext_instruction_memory.read(
-            self.state.IF["PC"])
+
+        # Basically a MUX but lazy one
+        # if IFIDWrite is 0, the Instr is not updated
+        if self.state.IF["IFIDWrite"]:
+            self.state.ID["Instr"] = self.ext_instruction_memory.read(
+                self.state.IF["PC"])
+            logger.info(f"IFIDWrite is 0, Instruction not updated")
+
         self.logger_instruction()
 
         program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
@@ -335,6 +346,7 @@ class FiveStageCore(Core):
         if self.state.ID["nop"]:
             logger.info(f"ID stage No Operation")
             return
+
         # This will stop the stage in the next cycle
         if self.state.IF["nop"] and self.halt_detected:
             self.state.ID["nop"] = True
@@ -352,6 +364,15 @@ class FiveStageCore(Core):
 
         write_register = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
 
+        """Forwarding"""
+        self.state.EX["Rs"] = rs1
+        self.state.EX["Rt"] = rs2
+        # todo: potentially missing forward Rd
+
+        """Hazard Detection Unit"""
+        self.state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
+
+
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
@@ -359,15 +380,26 @@ class FiveStageCore(Core):
             self.halt_detected = True
             self.state.IF["nop"] = True
 
-        logger.debug(f"Control Signals: {control_signals}")
-        self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
-        self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
-        self.state.EX["branch"] = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
-        jal = control_signals["JAL"]
-        self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
-        self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
-        self.state.EX["mem_to_reg"] = control_signals["MemtoReg"]  # WB stage, but not found for Single Stage Machine
-        self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
+        # Mux after Control Unit
+        if stall:
+            self.state.EX["alu_op"] = 0
+            self.state.EX["is_I_type"] = 0
+            self.state.EX["branch"] = 0
+            self.state.EX["jal"] = 0
+            self.state.EX["rd_mem"] = 0
+            self.state.EX["wrt_mem"] = 0
+            self.state.EX["mem_to_reg"] = 0
+            self.state.EX["wrt_enable"] = 0
+        else:
+            logger.debug(f"Control Signals: {control_signals}")
+            self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
+            self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
+            self.state.EX["branch"] = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
+            self.state.EX["jal"] = control_signals["JAL"]
+            self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
+            self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
+            self.state.EX["mem_to_reg"] = control_signals["MemtoReg"]  # WB stage, but not found for Single Stage Machine
+            self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
         self.state.EX["PC"] = self.state.ID["PC"]
 
@@ -376,7 +408,7 @@ class FiveStageCore(Core):
         self.state.EX["Read_data1"] = self.register_file.read(rs1)
         self.state.EX["Read_data2"] = self.register_file.read(rs2)
 
-        # Imm Gen
+        """Imm Gen"""
         self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
         # special ALU handling, if I-type, omit the func7 bit
         # I didn't find this in the book, without this, ALU cannot work on I-type
@@ -384,11 +416,6 @@ class FiveStageCore(Core):
             alu_control_func_code = alu_control_func_code & 0b111
         self.state.EX["alu_control_func"] = alu_control_func_code
         self.state.EX["Wrt_reg_addr"] = write_register
-
-        # Forwarding
-        self.state.EX["Rs"] = rs1
-        self.state.EX["Rt"] = rs2
-        # todo: potentially missing forward Rd
 
         self.logger_ALU()
 
@@ -535,16 +562,62 @@ class FiveStageCore(Core):
             f"+-----------------------------+---------------------------------+-----------------------------+")
 
     def printState(self, state, cycle):
-        printstate = ["-" * 70 + "\n", "State after executing cycle: " + str(cycle) + "\n"]
-        printstate.extend(["IF." + key + ": " + str(val) + "\n" for key, val in state.IF.items()])
-        printstate.extend(["ID." + key + ": " + str(val) + "\n" for key, val in state.ID.items()])
-        printstate.extend(["EX." + key + ": " + str(val) + "\n" for key, val in state.EX.items()])
-        printstate.extend(["MEM." + key + ": " + str(val) + "\n" for key, val in state.MEM.items()])
-        printstate.extend(["WB." + key + ": " + str(val) + "\n" for key, val in state.WB.items()])
+        def format_binary(val, bits=32):
+            """Format the value as a binary string and pad it to the specified length."""
+            if isinstance(val, int):
+                return f"{val:0{bits}b}"
+            return str(val)
 
-        if (cycle == 0):
-            perm = "w"
-        else:
-            perm = "a"
+        printstate = ["-" * 70 + "\n", f"State after executing cycle: {cycle}\n"]
+
+        # Format the output of each pipeline stage as required
+        formatted_output = {
+            "IF": {"nop": state.IF.get("nop"), "PC": state.IF.get("PC")},
+            "ID": {"nop": state.ID.get("nop"), "Instr": format_binary(state.ID.get("Instr"))},
+            "EX": {
+                "nop": state.EX.get("nop"),
+                "instr": "",
+                "Read_data1": format_binary(state.EX.get("Read_data1")),
+                "Read_data2": format_binary(state.EX.get("Read_data2")),
+                "Imm": format_binary(state.EX.get("Imm")),
+                "Rs": format_binary(state.EX.get("Rs"), 5),
+                "Rt": format_binary(state.EX.get("Rt"), 5),
+                "Wrt_reg_addr": format_binary(state.EX.get("Wrt_reg_addr"), 5),
+                "is_I_type": state.EX.get("is_I_type"),
+                "rd_mem": state.EX.get("rd_mem"),
+                "wrt_mem": state.EX.get("wrt_mem"),
+                "alu_op": format_binary(state.EX.get("alu_op"), 2),
+                "wrt_enable": state.EX.get("wrt_enable"),
+            },
+            "MEM": {
+                "nop": state.MEM.get("nop"),
+                "ALUresult": format_binary(state.MEM.get("ALUresult")),
+                "Store_data": format_binary(state.MEM.get("Store_data")),
+                "Rs": format_binary(state.MEM.get("Rs"), 5),
+                "Rt": format_binary(state.MEM.get("Rt"), 5),
+                "Wrt_reg_addr": format_binary(state.MEM.get("Wrt_reg_addr"), 5),
+                "rd_mem": state.MEM.get("rd_mem"),
+                "wrt_mem": state.MEM.get("wrt_mem"),
+                "wrt_enable": state.MEM.get("wrt_enable"),
+            },
+            "WB": {
+                "nop": state.WB.get("nop"),
+                "Wrt_data": format_binary(state.WB.get("Wrt_data")),
+                "Rs": format_binary(state.WB.get("Rs"), 5),
+                "Rt": format_binary(state.WB.get("Rt"), 5),
+                "Wrt_reg_addr": format_binary(state.WB.get("Wrt_reg_addr"), 5),
+                "wrt_enable": state.WB.get("wrt_enable"),
+            },
+        }
+
+        # Add the formatted data to printstate
+        for stage, fields in formatted_output.items():
+            for key, val in fields.items():
+                printstate.append(f"{stage}.{key}: {val}\n")
+
+        # Determine file open mode
+        perm = "w" if cycle == 0 else "a"
+
+        # Write file
         with open(self.opFilePath, perm) as wf:
             wf.writelines(printstate)

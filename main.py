@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
         # test only
         if fsCore.cycle > 30:
-            logger.error("Single Stage Core is taking too long to execute. Exiting...")
+            logger.error("Five Stage Core is taking too long to execute. Exiting...")
             break
 
     # dump SS and FS data mem.
