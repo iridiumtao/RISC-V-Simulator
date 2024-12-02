@@ -26,15 +26,21 @@ def forwarding_unit(state: State) -> (int, int):
             state.MEM["Wrt_reg_addr"] == state.EX["Rt"]):
         forward_b = 0b10
 
-    # MEM/WB forwarding (lower priority)
-    elif (state.WB["wrt_enable"] and
-          state.WB["Wrt_reg_addr"] != 0 and
-          state.WB["Wrt_reg_addr"] == state.EX["Rs"]):
+    # MEM/WB forwarding (only if EX/MEM does not handle it)
+    if (state.WB["wrt_enable"] and
+            state.WB["Wrt_reg_addr"] != 0 and
+            not (state.MEM["wrt_enable"] and
+                 state.MEM["Wrt_reg_addr"] == state.EX["Rs"]) and
+            state.WB["Wrt_reg_addr"] == state.EX["Rs"]):
         forward_a = 0b01
-    elif (state.WB["wrt_enable"] and
-          state.WB["Wrt_reg_addr"] != 0 and
-          state.WB["Wrt_reg_addr"] == state.EX["Rt"]):
+
+    if (state.WB["wrt_enable"] and
+            state.WB["Wrt_reg_addr"] != 0 and
+            not (state.MEM["wrt_enable"] and
+                 state.MEM["Wrt_reg_addr"] == state.EX["Rt"]) and
+            state.WB["Wrt_reg_addr"] == state.EX["Rt"]):
         forward_b = 0b01
+
 
     logger.debug(f"Forwarding: {forward_a:#b}, {forward_b:#b}")
 
@@ -67,3 +73,62 @@ def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
     IDWrite = not stall
 
     return PCWrite, IDWrite, stall
+
+
+# 模擬不同狀態的 State class
+from unittest import TestCase
+
+
+class TestForwardingUnit(TestCase):
+
+    def setUp(self):
+        """ 初始化 state 狀態 """
+        self.state = State()
+
+        # 初始化 pipeline registers
+        self.state.EX = {"Rs": 1, "Rt": 2, "Wrt_reg_addr": 0, "Read_data1": 0, "Read_data2": 0}
+        self.state.MEM = {"wrt_enable": 0, "Wrt_reg_addr": 0, "ALUresult": 0}
+        self.state.WB = {"wrt_enable": 0, "Wrt_reg_addr": 0, "Wrt_data": 0}
+
+    def test_ex_mem_forwarding(self):
+        """ 測試 EX/MEM forwarding """
+        self.state.EX["Rs"] = 1
+        self.state.MEM["wrt_enable"] = 1
+        self.state.MEM["Wrt_reg_addr"] = 1  # Rs forwarding match
+
+        forward_a, forward_b = forwarding_unit(self.state)
+        self.assertEqual(forward_a, 0b10)
+        self.assertEqual(forward_b, 0b00)
+
+    def test_mem_wb_forwarding(self):
+        """ 測試 MEM/WB forwarding """
+        self.state.EX["Rt"] = 2
+        self.state.WB["wrt_enable"] = 1
+        self.state.WB["Wrt_reg_addr"] = 2  # Rt forwarding match
+
+        forward_a, forward_b = forwarding_unit(self.state)
+        self.assertEqual(forward_a, 0b00)
+        self.assertEqual(forward_b, 0b01)
+
+    def test_no_forwarding(self):
+        """ 測試無 forwarding """
+        self.state.EX["Rs"] = 3
+        self.state.EX["Rt"] = 4
+        self.state.MEM["Wrt_reg_addr"] = 1
+        self.state.WB["Wrt_reg_addr"] = 2
+
+        forward_a, forward_b = forwarding_unit(self.state)
+        self.assertEqual(forward_a, 0b00)
+        self.assertEqual(forward_b, 0b00)
+
+    def test_ex_mem_priority(self):
+        """ 測試 EX/MEM forwarding 優先級 """
+        self.state.EX["Rs"] = 1
+        self.state.MEM["wrt_enable"] = 1
+        self.state.MEM["Wrt_reg_addr"] = 1  # Rs forwarding match (EX/MEM)
+        self.state.WB["wrt_enable"] = 1
+        self.state.WB["Wrt_reg_addr"] = 1  # Rs forwarding match (MEM/WB)
+
+        forward_a, forward_b = forwarding_unit(self.state)
+        self.assertEqual(forward_a, 0b10)  # EX/MEM 應優先
+        self.assertEqual(forward_b, 0b00)

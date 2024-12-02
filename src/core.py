@@ -486,7 +486,7 @@ class FiveStageCore(Core):
                                   self.state.MEM["ALUresult"],
                                   self.state.WB["Wrt_data"])
         # forwarding unit alu input b
-        alu_input_b = multiplexer(forward_b,
+        forward_b_result = multiplexer(forward_b,
                                   self.state.EX["Read_data2"],
                                   self.state.MEM["ALUresult"],
                                   self.state.WB["Wrt_data"])
@@ -503,11 +503,11 @@ class FiveStageCore(Core):
         self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
         self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
         self.state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
-        self.state.MEM["Store_data"] = self.state.EX["Read_data2"]  # ID Register output: Read register 2 (rd2)
+        self.state.MEM["Store_data"] = forward_b_result  # ID Register output: Read register 2 (rd2)
 
         # rd2 or imm ALU input b
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
-                                  alu_input_b,
+                                  forward_b_result,
                                   4,  # unnecessary. but we keep this for compatibility
                                   self.state.EX["Imm"])  # extract the least significant bit
 
