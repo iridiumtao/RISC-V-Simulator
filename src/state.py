@@ -26,12 +26,13 @@ class State(object):
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
-                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0, "jal": 0}
+                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0, "jal": 0, "instr": 0}
         """ ID/EX Pipeline register
         
         "Execution/address calculation: The signals to be set are ALUOp and ALUSrc (see Figures 4.49 and 4.50). The signals select the ALU operation and either Read data 2 or a sign-extended immediate as inputs to the ALU."  Comp.Org P.331
                 
         { nop: No Operation, 
+          instr: 32 bit binary Instruction stores in int, 
           * PC: Program Counter,
         
           Rs: ID Register input: rs1, 

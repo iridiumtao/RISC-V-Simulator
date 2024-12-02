@@ -275,27 +275,45 @@ class FiveStageCore(Core):
                 self.state.WB["nop"]):
             self.halted = True
         # Your implementation
+        temp_nop = {"if": False, "id": False, "ex": False, "mem": False, "wb": False}
         # --------------------- WB stage ---------------------
 
+
         self.wb_stage()
+        temp_nop["wb"] = self.state.WB["nop"]
+        self.state.WB["nop"] = self.update_nop_state(prev_stage_nop=self.state.MEM["nop"],
+                                                     halt_detected=self.halt_detected)
 
         # --------------------- MEM stage --------------------
 
+
         self.mem_stage()
+        temp_nop["mem"] = self.state.MEM["nop"]
+        self.state.MEM["nop"] = self.update_nop_state(prev_stage_nop=self.state.EX["nop"],
+                                                      halt_detected=self.halt_detected)
 
         # --------------------- EX stage ---------------------
 
+
         self.ex_stage()
+        temp_nop["ex"] = self.state.EX["nop"]
+        self.state.EX["nop"] = self.update_nop_state(prev_stage_nop=self.state.ID["nop"],
+                                                     halt_detected=self.halt_detected)
 
         # --------------------- ID stage ---------------------
 
+
         self.id_stage()
+        temp_nop["id"] = self.state.ID["nop"]
+        self.state.ID["nop"] = self.update_nop_state(prev_stage_nop=self.state.IF["nop"],
+                                                     halt_detected=self.halt_detected)
 
         # --------------------- IF stage ---------------------
 
         # Only fetch new instructions if HALT hasn't been detected
         if not self.halt_detected:
             self.if_stage()
+            temp_nop["if"] = self.state.IF["nop"]
         else:
             self.state.IF["nop"] = True
 
@@ -309,14 +327,13 @@ class FiveStageCore(Core):
         self.register_file.output(self.cycle)  # dump RF
         self.printState(self.state, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
-        # self.state = self.nextState  # The end of the cycle and updates the current state with the values calculated in this cycle
         self.cycle += 1
 
     def if_stage(self):
         logger.debug(f"--------------------- IF stage ")
         logger.info(f"state: {self.state.IF}")
         if self.state.IF["nop"]:
-            logger.info(f"IF stage No Operation")
+            logger.warning(f"IF stage No Operation")
             return
 
         # PCWrite from Hazard Detection Unit
@@ -346,7 +363,7 @@ class FiveStageCore(Core):
         logger.debug(f"--------------------- ID stage ")
         logger.info(f"state: {self.state.ID}")
         if self.state.ID["nop"]:
-            logger.info(f"ID stage No Operation")
+            logger.warning(f"ID stage No Operation")
             return
 
         # This will stop the stage in the next cycle
@@ -369,6 +386,8 @@ class FiveStageCore(Core):
         """Forward to next pipeline register"""
         self.state.EX["Rs"] = rs1
         self.state.EX["Rt"] = rs2
+        # According to the assignment testcase, the naming IS MEANT TO BE DIFFERENT
+        self.state.EX["instr"] = self.state.ID["Instr"]
 
 
         """Hazard Detection Unit"""
@@ -386,6 +405,7 @@ class FiveStageCore(Core):
 
         # Mux after Control Unit
         if stall:
+            self.state.EX["nop"] = True
             self.state.EX["alu_op"] = 0
             self.state.EX["is_I_type"] = 0
             self.state.EX["branch"] = 0
@@ -414,7 +434,7 @@ class FiveStageCore(Core):
         self.state.EX["Read_data2"] = self.register_file.read(rs2)
 
         """Imm Gen"""
-        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.ID["Instr"])
+        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.EX["instr"])
         # special ALU handling, if I-type, omit the func7 bit
         # I didn't find this in the book, without this, ALU cannot work on I-type
         if opcode == 19:  # I-type
@@ -424,13 +444,21 @@ class FiveStageCore(Core):
             self.state.EX["Rt"] = 0  # I-type doesn't have Rt (prevent problem from hazard detection unit)
         self.state.EX["alu_control_func"] = alu_control_func_code
 
-        self.logger_ALU()
+        self.logger_data_memory_result()
+
+        # clear EX stage if stall
+        if stall:
+            self.state.EX["Read_data1"] = 0
+            self.state.EX["Read_data2"] = 0
+            self.state.EX["Rs"] = 0
+            self.state.EX["Rt"] = 0
+            self.state.EX["Wrt_reg_addr"] = 0
 
     def ex_stage(self):
         logger.debug(f"--------------------- EX stage ")
         logger.info(f"state: {self.state.EX}")
         if self.state.EX["nop"]:
-            logger.info(f"EX stage No Operation")
+            logger.warning(f"EX stage No Operation")
             return
         # This will stop the stage in the next cycle
         if self.state.ID["nop"] and self.halt_detected:
@@ -494,7 +522,7 @@ class FiveStageCore(Core):
         logger.debug(f"--------------------- MEM stage ")
         logger.info(f"state: {self.state.MEM}")
         if self.state.MEM["nop"]:
-            logger.info(f"MEM stage No Operation")
+            logger.warning(f"MEM stage No Operation")
             return
         # This will stop the stage in the next cycle
         if self.state.EX["nop"] and self.halt_detected:
@@ -532,20 +560,22 @@ class FiveStageCore(Core):
             logger.debug("Read data")
             self.state.WB["read_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
 
+        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
+                                                self.state.WB["ALUresult"],
+                                                self.state.WB["read_data"])
+
     def wb_stage(self):
         logger.debug(f"--------------------- WB stage ")
         logger.info(f"state: {self.state.WB}")
         if self.state.WB["nop"]:
-            logger.info(f"WB stage No Operation")
+            logger.warning(f"WB stage No Operation")
             return
         # This will stop the stage in the next cycle
         if self.state.EX["nop"] and self.halt_detected:
             logger.info(f"WB stage will nop in the next cycle")
             self.state.WB["nop"] = True
 
-        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
-                                                self.state.WB["ALUresult"],
-                                                self.state.WB["read_data"])
+
         logger.debug(f"Write Enable: {bool(self.state.WB['wrt_enable'])}")
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
@@ -555,7 +585,7 @@ class FiveStageCore(Core):
         logger.debug(f"Instruction: func7.|rs2.|rs1.|3.|rd..|opcode|")
         logger.debug(f"Instruction: {self.state.ID['Instr']:032b}")
 
-    def logger_ALU(self):
+    def logger_data_memory_result(self):
         logger.opt(colors=True).info(
             f"+-----------------------------+---------------------------------+-----------------------------+")
         logger.opt(colors=True).info(f"| Register      | Mem Addr  | \t\t\tValue Bin (Dec) \t\t  |")
@@ -568,6 +598,25 @@ class FiveStageCore(Core):
         logger.opt(colors=True).info(
             f"+-----------------------------+---------------------------------+-----------------------------+")
 
+    def update_nop_state(self, prev_stage_nop, halt_detected):
+        """
+        update next nop state
+
+        Condition 1: if last cycle is NOP and not HALT, clear NOP
+        Condition 2: if last stage is NOP, current stage should be NOP
+
+        :param prev_stage_nop: previous stage NOP state
+        :param halt_detected: HALT state, if True, return True。
+        :return: updated NOP state
+        """
+        if halt_detected:
+            return True
+        # Condition 2
+        if prev_stage_nop:
+            return True
+        # Condition 1
+        return False
+
     def set_init_nop_state(self):
         if self.cycle == 0:
             self.state.IF["nop"] = False
@@ -575,24 +624,24 @@ class FiveStageCore(Core):
             self.state.EX["nop"] = True
             self.state.MEM["nop"] = True
             self.state.WB["nop"] = True
-        elif self.cycle == 1:
-            self.state.IF["nop"] = False
-            self.state.ID["nop"] = False
-            self.state.EX["nop"] = False
-            self.state.MEM["nop"] = True
-            self.state.WB["nop"] = True
-        elif self.cycle == 2:
-            self.state.IF["nop"] = False
-            self.state.ID["nop"] = False
-            self.state.EX["nop"] = False
-            self.state.MEM["nop"] = False
-            self.state.WB["nop"] = True
-        elif self.cycle == 3:
-            self.state.IF["nop"] = False
-            self.state.ID["nop"] = False
-            self.state.EX["nop"] = False
-            self.state.MEM["nop"] = False
-            self.state.WB["nop"] = False
+        # elif self.cycle == 1:
+        #     self.state.IF["nop"] = False
+        #     self.state.ID["nop"] = False
+        #     self.state.EX["nop"] = False
+        #     self.state.MEM["nop"] = True
+        #     self.state.WB["nop"] = True
+        # elif self.cycle == 2:
+        #     self.state.IF["nop"] = False
+        #     self.state.ID["nop"] = False
+        #     self.state.EX["nop"] = False
+        #     self.state.MEM["nop"] = False
+        #     self.state.WB["nop"] = True
+        # elif self.cycle == 3:
+        #     self.state.IF["nop"] = False
+        #     self.state.ID["nop"] = False
+        #     self.state.EX["nop"] = False
+        #     self.state.MEM["nop"] = False
+        #     self.state.WB["nop"] = False
 
     def printState(self, state, cycle):
         def format_binary(val, bits=32):
@@ -609,7 +658,7 @@ class FiveStageCore(Core):
             "ID": {"nop": state.ID.get("nop"), "Instr": format_binary(state.ID.get("Instr"))},
             "EX": {
                 "nop": state.EX.get("nop"),
-                "instr": "",
+                "instr": format_binary(state.EX.get("instr")),
                 "Read_data1": format_binary(state.EX.get("Read_data1")),
                 "Read_data2": format_binary(state.EX.get("Read_data2")),
                 "Imm": format_binary(state.EX.get("Imm"), 12),
