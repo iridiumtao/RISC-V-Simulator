@@ -369,7 +369,7 @@ class FiveStageCore(Core):
         """Forwarding"""
         self.state.EX["Rs"] = rs1
         self.state.EX["Rt"] = rs2
-        # todo: potentially missing forward Rd
+        self.state.EX["Wrt_reg_addr"] = write_register
 
         """Hazard Detection Unit"""
         self.state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
@@ -416,8 +416,10 @@ class FiveStageCore(Core):
         # I didn't find this in the book, without this, ALU cannot work on I-type
         if opcode == 19:  # I-type
             alu_control_func_code = alu_control_func_code & 0b111
+        # todo: see if we can merge the two if statements
+        if opcode == 19 or opcode == 3:
+            self.state.EX["Rt"] = 0  # I-type doesn't have Rt (prevent problem from hazard detection unit)
         self.state.EX["alu_control_func"] = alu_control_func_code
-        self.state.EX["Wrt_reg_addr"] = write_register
 
         self.logger_ALU()
 
