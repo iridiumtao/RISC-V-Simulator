@@ -315,6 +315,7 @@ class FiveStageCore(Core):
             self.if_stage()
             temp_nop["if"] = self.state.IF["nop"]
         else:
+            logger.warning(f"IF stage No Operation")
             self.state.IF["nop"] = True
 
         # ----------------------- End ------------------------
@@ -332,6 +333,16 @@ class FiveStageCore(Core):
     def if_stage(self):
         logger.debug(f"--------------------- IF stage ")
         logger.info(f"state: {self.state.IF}")
+
+        # Conform to the assignment hidden requirements
+        if self.ext_instruction_memory.read(self.state.IF["PC"]) == 0b11111111111111111111111111111111:
+            self.halt_detected = True
+            self.state.IF["nop"] = True
+            self.state.ID["nop"] = True
+            logger.warning(f"HALT detected")
+            return
+
+
         if self.state.IF["nop"]:
             logger.warning(f"IF stage No Operation")
             return
@@ -609,7 +620,7 @@ class FiveStageCore(Core):
         :param halt_detected: HALT state, if True, return True。
         :return: updated NOP state
         """
-        if halt_detected:
+        if halt_detected and prev_stage_nop:
             return True
         # Condition 2
         if prev_stage_nop:
