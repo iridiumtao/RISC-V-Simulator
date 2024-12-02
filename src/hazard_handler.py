@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from loguru import logger
 from src.state import State
 
@@ -38,15 +40,17 @@ def forwarding_unit(state: State) -> (int, int):
 
     return forward_a, forward_b
 
-def hazard_detection_unit(state: State) -> bool:
-
+def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
+    logger.debug(f"previous EX.rd_mem: {state.EX["rd_mem"]}, previous EX.Rd1: {state.EX["Read_data1"]}")
+    logger.debug(f"current EX.Rs1: {state.EX["Rs"]}, current EX.Rs2(Rt): {state.EX["Rt"]}")
     # Use previous EX.MemRead and previous EX.Rd
     # and the current EX.Rs1 and EX.Rs2
     if (state.EX["rd_mem"] and
-            (state.EX["Read_data1"] == state.EX["Rs"] or
-             state.EX["Read_data1"] == state.EX["Rt"])):
+            state.EX["Wrt_reg_addr"] != 0 and
+            (state.EX["Wrt_reg_addr"] == state.EX["Rs"] or
+             state.EX["Wrt_reg_addr"] == state.EX["Rt"])):
         stall = True
-        logger.info("Hazard Detected.")
+        logger.warning("Hazard Detected.")
     else:
         stall = False
         logger.info("No Hazard Detected.")

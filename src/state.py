@@ -42,7 +42,7 @@ class State(object):
           
           Imm: ID Imm Gen output, 
           
-          Wrt_reg_addr: ID Register input: Write register (from WB stage),
+          Wrt_reg_addr: ID Register input: Write register (rd),
           
           * alu_control_func: 4 bits ALU Control opcode,
 

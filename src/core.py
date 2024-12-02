@@ -265,11 +265,14 @@ class FiveStageCore(Core):
         self.opFilePath = io_dir / "StateResult_FS.txt"
 
     def step(self):
+        # Set the nop states based on the cycle number, REQUIRED by the assignment
+        self.set_init_nop_state()
+
         if (self.halt_detected and
-            self.state.ID["nop"] and
-            self.state.EX["nop"] and
-            self.state.MEM["nop"] and
-            self.state.WB["nop"]):
+                self.state.ID["nop"] and
+                self.state.EX["nop"] and
+                self.state.MEM["nop"] and
+                self.state.WB["nop"]):
             self.halted = True
         # Your implementation
         # --------------------- WB stage ---------------------
@@ -298,7 +301,6 @@ class FiveStageCore(Core):
 
         # ----------------------- End ------------------------
 
-
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
         logger.opt(colors=True).info(
             f"<green>-------------- ↑ {self.cycle} cycle |  {self.cycle + 1} cycle ↓ --------------</green>")
@@ -326,12 +328,12 @@ class FiveStageCore(Core):
         self.state.ID["PC"] = self.state.IF["PC"]
         logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
 
-        # Basically a MUX but lazy one
+        # Basically a MUX but lazy version
         # if IFIDWrite is 0, the Instr is not updated
         if self.state.IF["IFIDWrite"]:
-            self.state.ID["Instr"] = self.ext_instruction_memory.read(
-                self.state.IF["PC"])
-            logger.info(f"IFIDWrite is 0, Instruction not updated")
+            self.state.ID["Instr"] = self.ext_instruction_memory.read(self.state.IF["PC"])
+        else:
+            logger.warning(f"IFIDWrite is 0, Instruction not updated")
 
         self.logger_instruction()
 
@@ -372,7 +374,6 @@ class FiveStageCore(Core):
         """Hazard Detection Unit"""
         self.state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
 
-
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
@@ -398,7 +399,8 @@ class FiveStageCore(Core):
             self.state.EX["jal"] = control_signals["JAL"]
             self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
             self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
-            self.state.EX["mem_to_reg"] = control_signals["MemtoReg"]  # WB stage, but not found for Single Stage Machine
+            self.state.EX["mem_to_reg"] = control_signals[
+                "MemtoReg"]  # WB stage, but not found for Single Stage Machine
             self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
         self.state.EX["PC"] = self.state.ID["PC"]
@@ -459,11 +461,10 @@ class FiveStageCore(Core):
         self.state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
         self.state.MEM["Store_data"] = self.state.EX["Read_data2"]  # ID Register output: Read register 2 (rd2)
 
-
         # rd2 or imm ALU input b
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
                                   alu_input_b,
-                                  4, # unnecessary. but we keep this for compatibility
+                                  4,  # unnecessary. but we keep this for compatibility
                                   self.state.EX["Imm"])  # extract the least significant bit
 
         # ALUOp 2-bit, generated from the Main Control Unit
@@ -483,7 +484,6 @@ class FiveStageCore(Core):
             f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
         self.state.MEM["bne"] = bne_func
         self.state.MEM["ALUZero"] = zero
-
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
@@ -510,15 +510,17 @@ class FiveStageCore(Core):
         """Branch condition"""
         # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
         # Branch handling, BEQ, BNE handling, JAL handling
-        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"], xor_gate(self.state.MEM["ALUZero"], self.state.MEM["bne"])))
-        logger.debug(f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
-
+        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
+                                                              xor_gate(self.state.MEM["ALUZero"],
+                                                                       self.state.MEM["bne"])))
+        logger.debug(
+            f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
 
         """Data Memory Unit"""
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
             self.ext_data_memory.write(
-                self.state.MEM["ALUresult"], # ALU output (Addr (rs1) + imm)
+                self.state.MEM["ALUresult"],  # ALU output (Addr (rs1) + imm)
                 self.state.MEM["Store_data"])  # rd2
         self.state.WB["read_data"] = None
         if self.state.MEM["rd_mem"] == 1:
@@ -537,8 +539,8 @@ class FiveStageCore(Core):
             self.state.WB["nop"] = True
 
         self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
-                                               self.state.WB["ALUresult"],
-                                               self.state.WB["read_data"])
+                                                self.state.WB["ALUresult"],
+                                                self.state.WB["read_data"])
         logger.debug(f"Write Enable: {bool(self.state.WB['wrt_enable'])}")
         if self.state.WB["wrt_enable"] == 1:
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
@@ -561,6 +563,32 @@ class FiveStageCore(Core):
         logger.opt(colors=True).info(
             f"+-----------------------------+---------------------------------+-----------------------------+")
 
+    def set_init_nop_state(self):
+        if self.cycle == 0:
+            self.state.IF["nop"] = False
+            self.state.ID["nop"] = False
+            self.state.EX["nop"] = True
+            self.state.MEM["nop"] = True
+            self.state.WB["nop"] = True
+        elif self.cycle == 1:
+            self.state.IF["nop"] = False
+            self.state.ID["nop"] = False
+            self.state.EX["nop"] = False
+            self.state.MEM["nop"] = True
+            self.state.WB["nop"] = True
+        elif self.cycle == 2:
+            self.state.IF["nop"] = False
+            self.state.ID["nop"] = False
+            self.state.EX["nop"] = False
+            self.state.MEM["nop"] = False
+            self.state.WB["nop"] = True
+        elif self.cycle == 3:
+            self.state.IF["nop"] = False
+            self.state.ID["nop"] = False
+            self.state.EX["nop"] = False
+            self.state.MEM["nop"] = False
+            self.state.WB["nop"] = False
+
     def printState(self, state, cycle):
         def format_binary(val, bits=32):
             """Format the value as a binary string and pad it to the specified length."""
@@ -579,7 +607,7 @@ class FiveStageCore(Core):
                 "instr": "",
                 "Read_data1": format_binary(state.EX.get("Read_data1")),
                 "Read_data2": format_binary(state.EX.get("Read_data2")),
-                "Imm": format_binary(state.EX.get("Imm")),
+                "Imm": format_binary(state.EX.get("Imm"), 12),
                 "Rs": format_binary(state.EX.get("Rs"), 5),
                 "Rt": format_binary(state.EX.get("Rt"), 5),
                 "Wrt_reg_addr": format_binary(state.EX.get("Wrt_reg_addr"), 5),
