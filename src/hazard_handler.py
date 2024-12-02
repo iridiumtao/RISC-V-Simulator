@@ -41,10 +41,18 @@ def forwarding_unit(state: State) -> (int, int):
     return forward_a, forward_b
 
 def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
-    logger.debug(f"previous EX.rd_mem: {state.EX["rd_mem"]}, previous EX.Rd1: {state.EX["Read_data1"]}")
+    """
+    Detects hazards in the pipeline and determines whether to stall the pipeline.
+
+    Use previous EX.MemRead and *previous* EX.Rd and the *current* EX.Rs1 and EX.Rs2
+
+    :param state: The current state of the pipeline, containing pipeline registers.
+    :return: A tuple (PCWrite, IDWrite, stall) indicating whether to write to the PC,
+             whether to write to the ID stage, and whether a stall is needed.
+    """
+    logger.debug(f"previous EX.rd_mem: {state.EX["rd_mem"]}, previous EX.Rd(Wrt_reg_addr): {state.EX["Wrt_reg_addr"]}")
     logger.debug(f"current EX.Rs1: {state.EX["Rs"]}, current EX.Rs2(Rt): {state.EX["Rt"]}")
-    # Use previous EX.MemRead and previous EX.Rd
-    # and the current EX.Rs1 and EX.Rs2
+
     if (state.EX["rd_mem"] and
             state.EX["Wrt_reg_addr"] != 0 and
             (state.EX["Wrt_reg_addr"] == state.EX["Rs"] or

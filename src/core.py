@@ -366,13 +366,16 @@ class FiveStageCore(Core):
 
         write_register = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
 
-        """Forwarding"""
+        """Forward to next pipeline register"""
         self.state.EX["Rs"] = rs1
         self.state.EX["Rt"] = rs2
-        self.state.EX["Wrt_reg_addr"] = write_register
+
 
         """Hazard Detection Unit"""
         self.state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
+
+        # Forward to next pipeline register AFTER hazard detection unit
+        self.state.EX["Wrt_reg_addr"] = write_register
 
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
