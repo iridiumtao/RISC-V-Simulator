@@ -457,6 +457,16 @@ class FiveStageCore(Core):
 
         self.logger_data_memory_result()
 
+        """Branch condition"""
+        # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
+        # Branch handling, BEQ, BNE handling, JAL handling
+        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
+                                                              xor_gate(self.state.MEM["ALUZero"],
+                                                                       self.state.MEM["bne"])))
+        logger.debug(
+            f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
+
+
         # clear EX stage if stall
         if stall:
             self.state.EX["Read_data1"] = 0
@@ -551,14 +561,6 @@ class FiveStageCore(Core):
         self.state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
 
         self.mem_stage_pc_result = self.state.MEM["PC"]
-        """Branch condition"""
-        # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
-        # Branch handling, BEQ, BNE handling, JAL handling
-        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
-                                                              xor_gate(self.state.MEM["ALUZero"],
-                                                                       self.state.MEM["bne"])))
-        logger.debug(
-            f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
 
         """Data Memory Unit"""
         if self.state.MEM["wrt_mem"] == 1:
