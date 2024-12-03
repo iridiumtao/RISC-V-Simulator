@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import copy
 from loguru import logger
 
 from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, \
@@ -22,7 +22,7 @@ class Core(object):
 
         self.ioDir = ioDir
         self.state = State()
-        self.nextState = State()
+        self.next_state = State()
         self.ext_instruction_memory = instruction_memory
         self.ext_data_memory = data_memory
 
@@ -207,10 +207,10 @@ class SingleStageCore(Core):
             self.register_file.write(self.state.WB["Wrt_reg_addr"], self.state.WB["Wrt_data"])
 
         if not self.state.IF["nop"]:
-            self.nextState.IF["PC"] = program_counter
+            self.next_state.IF["PC"] = program_counter
         else:
             # 當nop時，保持PC不變
-            self.nextState.IF["PC"] = self.state.IF["PC"]
+            self.next_state.IF["PC"] = self.state.IF["PC"]
 
         # ----------------------- End ------------------------
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
@@ -225,11 +225,11 @@ class SingleStageCore(Core):
             self.halted = True
 
         self.register_file.output(self.cycle)  # dump RF
-        self.print_state(self.nextState, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
+        self.print_state(self.next_state, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
         # The end of the cycle
         # and updates the current state with the values calculated in this cycle
-        self.state = self.nextState
+        self.state = self.next_state
         self.cycle += 1
 
     def print_state(self, state, cycle):
@@ -292,6 +292,8 @@ class FiveStageCore(Core):
 
         # --------------------- EX stage ---------------------
 
+        if (self.cycle == 7):
+            print("cycle = 7")
 
         self.ex_stage()
         temp_nop["ex"] = self.state.EX["nop"]
@@ -324,6 +326,8 @@ class FiveStageCore(Core):
         logger.opt(colors=True).debug(f"<green>-------------------- stage end ---------------------</green>")
 
         self.register_file.output(self.cycle)  # dump RF
+
+        self.state = copy.deepcopy(self.next_state) # todo: test next state
         self.printState(self.state, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
         self.cycle += 1
@@ -335,8 +339,8 @@ class FiveStageCore(Core):
         # Conform to the assignment hidden requirements
         if self.ext_instruction_memory.read(self.state.IF["PC"]) == 0b11111111111111111111111111111111:
             self.halt_detected = True
-            self.state.IF["nop"] = True
-            self.state.ID["nop"] = True
+            self.next_state.IF["nop"] = True
+            self.next_state.ID["nop"] = True
             logger.warning(f"HALT detected")
             return
 
@@ -351,13 +355,13 @@ class FiveStageCore(Core):
                                               self.state.IF["PC"],
                                               adder(4, self.state.IF["PC"]))
 
-        self.state.ID["PC"] = self.state.IF["PC"]
-        logger.opt(colors=True).info(f"<green>PC: {self.state.IF['PC']}</green>")
+        self.next_state.ID["PC"] = self.state.IF["PC"]
+        logger.opt(colors=True).info(f"<green>PC: {self.next_state.IF['PC']}</green>")
 
         # Basically a MUX but lazy version
         # if IFIDWrite is 0, the Instr is not updated
         if self.state.IF["IFIDWrite"]:
-            self.state.ID["Instr"] = self.ext_instruction_memory.read(self.state.IF["PC"])
+            self.next_state.ID["Instr"] = self.ext_instruction_memory.read(self.state.IF["PC"])
         else:
             logger.warning(f"IFIDWrite is 0, Instruction not updated")
 
@@ -366,7 +370,7 @@ class FiveStageCore(Core):
         program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
         logger.debug(f"PC Handling debug: Next PC: {program_counter}")
         # next PC
-        self.state.IF["PC"] = program_counter
+        self.next_state.IF["PC"] = program_counter
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
@@ -377,7 +381,7 @@ class FiveStageCore(Core):
 
         # This will stop the stage in the next cycle
         if self.state.IF["nop"] and self.halt_detected:
-            self.state.ID["nop"] = True
+            self.next_state.ID["nop"] = True
 
         """Instruction Fields Extracting"""
         opcode = self.state.ID["Instr"] & 0x7F
@@ -393,71 +397,72 @@ class FiveStageCore(Core):
         write_register = (self.state.ID["Instr"] >> 7) & 0x1F  # bits [11:7]
 
         """Forward to next pipeline register"""
-        self.state.EX["Rs"] = rs1
-        self.state.EX["Rt"] = rs2
+        self.next_state.EX["Rs"] = rs1
+        self.next_state.EX["Rt"] = rs2
         # According to the assignment testcase, the naming IS MEANT TO BE DIFFERENT
-        self.state.EX["instr"] = self.state.ID["Instr"]
+        self.next_state.EX["instr"] = self.state.ID["Instr"]
 
 
         """Hazard Detection Unit"""
-        self.state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
+        self.next_state.IF["PCWrite"], self.state.IF["IFIDWrite"], stall = hazard_detection_unit(self.state)
 
         # Forward to next pipeline register AFTER hazard detection unit
-        self.state.EX["Wrt_reg_addr"] = write_register
+        self.next_state.EX["Wrt_reg_addr"] = write_register
 
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
             # todo: potentially missing "halt on next cycle"
             self.halt_detected = True
-            self.state.IF["nop"] = True
+            self.next_state.IF["nop"] = True
 
         # Mux after Control Unit
         if stall:
-            self.state.EX["nop"] = True
-            self.state.EX["alu_op"] = 0
-            self.state.EX["is_I_type"] = 0
-            self.state.EX["branch"] = 0
-            self.state.EX["jal"] = 0
-            self.state.EX["rd_mem"] = 0
-            self.state.EX["wrt_mem"] = 0
-            self.state.EX["mem_to_reg"] = 0
-            self.state.EX["wrt_enable"] = 0
+            self.next_state.EX["nop"] = True
+            self.next_state.EX["alu_op"] = 0
+            self.next_state.EX["is_I_type"] = 0
+            self.next_state.EX["branch"] = 0
+            self.next_state.EX["jal"] = 0
+            self.next_state.EX["rd_mem"] = 0
+            self.next_state.EX["wrt_mem"] = 0
+            self.next_state.EX["mem_to_reg"] = 0
+            self.next_state.EX["wrt_enable"] = 0
         else:
             logger.debug(f"Control Signals: {control_signals}")
-            self.state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
-            self.state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
-            self.state.EX["branch"] = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
-            self.state.EX["jal"] = control_signals["JAL"]
-            self.state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
-            self.state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
-            self.state.EX["mem_to_reg"] = control_signals[
+            self.next_state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
+            self.next_state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
+            self.next_state.EX["branch"] = control_signals["Branch"]  # MEM stage, but not found for Single Stage Machine
+            self.next_state.EX["jal"] = control_signals["JAL"]
+            self.next_state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
+            self.next_state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
+            self.next_state.EX["mem_to_reg"] = control_signals[
                 "MemtoReg"]  # WB stage, but not found for Single Stage Machine
-            self.state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
+            self.next_state.EX["wrt_enable"] = control_signals["RegWrite"]  # WB stage
 
-        self.state.EX["PC"] = self.state.ID["PC"]
+        self.next_state.EX["PC"] = self.state.ID["PC"]
 
         """Register File"""
         # Ref: Comp.Org P.282.e5 Figure e4.5.4
-        self.state.EX["Read_data1"] = self.register_file.read(rs1)
-        self.state.EX["Read_data2"] = self.register_file.read(rs2)
+        self.next_state.EX["Read_data1"] = self.register_file.read(rs1)
+        self.next_state.EX["Read_data2"] = self.register_file.read(rs2)
 
         """Imm Gen"""
-        self.state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.EX["instr"])
+        self.next_state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.state.EX["instr"])
         # special ALU handling, if I-type, omit the func7 bit
         # I didn't find this in the book, without this, ALU cannot work on I-type
         if opcode == 19:  # I-type
             alu_control_func_code = alu_control_func_code & 0b111
         # todo: see if we can merge the two if statements
         if opcode == 19 or opcode == 3:
-            self.state.EX["Rt"] = 0  # I-type doesn't have Rt (prevent problem from hazard detection unit)
-        self.state.EX["alu_control_func"] = alu_control_func_code
+            self.next_state.EX["Rt"] = 0  # I-type doesn't have Rt (prevent problem from hazard detection unit)
+        self.next_state.EX["alu_control_func"] = alu_control_func_code
 
         self.logger_data_memory_result()
 
         """Branch condition"""
         # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
         # Branch handling, BEQ, BNE handling, JAL handling
+        # presumably, next pc src
         self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
                                                               xor_gate(self.state.MEM["ALUZero"],
                                                                        self.state.MEM["bne"])))
@@ -467,11 +472,11 @@ class FiveStageCore(Core):
 
         # clear EX stage if stall
         if stall:
-            self.state.EX["Read_data1"] = 0
-            self.state.EX["Read_data2"] = 0
-            self.state.EX["Rs"] = 0
-            self.state.EX["Rt"] = 0
-            self.state.EX["Wrt_reg_addr"] = 0
+            self.next_state.EX["Read_data1"] = 0
+            self.next_state.EX["Read_data2"] = 0
+            self.next_state.EX["Rs"] = 0
+            self.next_state.EX["Rt"] = 0
+            self.next_state.EX["Wrt_reg_addr"] = 0
 
     def ex_stage(self):
         logger.debug(f"--------------------- EX stage ")
@@ -481,10 +486,12 @@ class FiveStageCore(Core):
             return
         # This will stop the stage in the next cycle
         if self.state.ID["nop"] and self.halt_detected:
-            self.state.EX["nop"] = True
+            self.next_state.EX["nop"] = True
 
         # PC adder
-        self.state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
+        self.next_state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
+
+
 
         """Forwarding Unit"""
         forward_a, forward_b = forwarding_unit(self.state)
@@ -500,18 +507,18 @@ class FiveStageCore(Core):
                                   self.state.WB["Wrt_data"])
 
         """Passing data to subsequent pipeline registers"""
-        self.state.MEM["Rs"] = self.state.EX["Rs"]  # todo: ?
-        self.state.MEM["Rt"] = self.state.EX["Rt"]  # todo: ?
-        self.state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
+        self.next_state.MEM["Rs"] = self.state.EX["Rs"]  # todo: ?
+        self.next_state.MEM["Rt"] = self.state.EX["Rt"]  # todo: ?
+        self.next_state.MEM["Wrt_reg_addr"] = self.state.EX["Wrt_reg_addr"]
 
         """Passing control signal to subsequent pipeline registers"""
         # (see Comp.Org p.313 Figure 4.52)
-        self.state.MEM["branch"] = self.state.EX["branch"]
-        self.state.MEM["rd_mem"] = self.state.EX["rd_mem"]
-        self.state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
-        self.state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
-        self.state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
-        self.state.MEM["Store_data"] = forward_b_result  # ID Register output: Read register 2 (rd2)
+        self.next_state.MEM["branch"] = self.state.EX["branch"]
+        self.next_state.MEM["rd_mem"] = self.state.EX["rd_mem"]
+        self.next_state.MEM["wrt_mem"] = self.state.EX["wrt_mem"]
+        self.next_state.MEM["wrt_enable"] = self.state.EX["wrt_enable"]
+        self.next_state.MEM["mem_to_reg"] = self.state.EX["mem_to_reg"]
+        self.next_state.MEM["Store_data"] = forward_b_result  # ID Register output: Read register 2 (rd2)
 
         # rd2 or imm ALU input b
         alu_input_b = multiplexer(self.state.EX["is_I_type"],
@@ -534,8 +541,8 @@ class FiveStageCore(Core):
         bne_func = (self.state.EX["alu_control_func"] & 0x1)
         logger.debug(
             f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
-        self.state.MEM["bne"] = bne_func
-        self.state.MEM["ALUZero"] = zero
+        self.next_state.MEM["bne"] = bne_func
+        self.next_state.MEM["ALUZero"] = zero
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
@@ -545,18 +552,18 @@ class FiveStageCore(Core):
             return
         # This will stop the stage in the next cycle
         if self.state.EX["nop"] and self.halt_detected:
-            self.state.MEM["nop"] = True
+            self.next_state.MEM["nop"] = True
 
         """Passing data to subsequent pipeline registers"""
-        self.state.WB["ALUresult"] = self.state.MEM["ALUresult"]
-        self.state.WB["Rs"] = self.state.MEM["Rs"]
-        self.state.WB["Rt"] = self.state.MEM["Rt"]
-        self.state.WB["Wrt_reg_addr"] = self.state.MEM["Wrt_reg_addr"]
+        self.next_state.WB["ALUresult"] = self.state.MEM["ALUresult"]
+        self.next_state.WB["Rs"] = self.state.MEM["Rs"]
+        self.next_state.WB["Rt"] = self.state.MEM["Rt"]
+        self.next_state.WB["Wrt_reg_addr"] = self.state.MEM["Wrt_reg_addr"]
 
         """Passing control signal to subsequent pipeline registers"""
         # (see Comp.Org p.313 Figure 4.52)
-        self.state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
-        self.state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
+        self.next_state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
+        self.next_state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
 
         self.mem_stage_pc_result = self.state.MEM["PC"]
 
@@ -566,12 +573,12 @@ class FiveStageCore(Core):
             self.ext_data_memory.write(
                 address=self.state.MEM["ALUresult"],
                 data=self.state.MEM["Store_data"])  # rd2
-        self.state.WB["read_data"] = None
+        self.next_state.WB["read_data"] = None
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
-            self.state.WB["read_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
+            self.next_state.WB["read_data"] = self.ext_data_memory.read(self.state.MEM["ALUresult"])
 
-        self.state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
+        self.next_state.WB["Wrt_data"] = multiplexer(self.state.WB["mem_to_reg"],
                                                 self.state.WB["ALUresult"],
                                                 self.state.WB["read_data"])
 
@@ -584,7 +591,7 @@ class FiveStageCore(Core):
         # This will stop the stage in the next cycle
         if self.state.EX["nop"] and self.halt_detected:
             logger.info(f"WB stage will nop in the next cycle")
-            self.state.WB["nop"] = True
+            self.next_state.WB["nop"] = True
 
 
         logger.debug(f"Write Enable: {bool(self.state.WB['wrt_enable'])}")
@@ -594,18 +601,18 @@ class FiveStageCore(Core):
     def logger_instruction(self):
         logger.debug(f"Instruction: +.....-+...-+...-+.-+...-+.....-")
         logger.debug(f"Instruction: func7.|rs2.|rs1.|3.|rd..|opcode|")
-        logger.debug(f"Instruction: {self.state.ID['Instr']:032b}")
+        logger.debug(f"Instruction: {self.next_state.ID['Instr']:032b}")
 
     def logger_data_memory_result(self):
         logger.opt(colors=True).info(
             f"+-----------------------------+---------------------------------+-----------------------------+")
         logger.opt(colors=True).info(f"| Register      | Mem Addr  | \t\t\tValue Bin (Dec) \t\t  |")
         logger.opt(colors=True).info(
-            f"| Rs / Rd1      | {self.state.EX['Rs']:05b} ({self.state.EX['Rs']}) | {self.state.EX['Read_data1']:032b} ({self.state.EX['Read_data1']}) |")
+            f"| Rs / Rd1      | {self.next_state.EX['Rs']:05b} ({self.next_state.EX['Rs']}) | {self.next_state.EX['Read_data1']:032b} ({self.next_state.EX['Read_data1']}) |")
         logger.opt(colors=True).info(
-            f"| Rt / Rd2      | {self.state.EX['Rt']:05b} ({self.state.EX['Rt']}) | {self.state.EX['Read_data2']:032b} ({self.state.EX['Read_data2']}) |")
+            f"| Rt / Rd2      | {self.next_state.EX['Rt']:05b} ({self.next_state.EX['Rt']}) | {self.next_state.EX['Read_data2']:032b} ({self.next_state.EX['Read_data2']}) |")
         logger.opt(colors=True).info(
-            f"| Wrt_reg_addr  | {self.state.EX['Wrt_reg_addr']:05b} ({self.state.EX['Wrt_reg_addr']}) |")
+            f"| Wrt_reg_addr  | {self.next_state.EX['Wrt_reg_addr']:05b} ({self.next_state.EX['Wrt_reg_addr']}) |")
         logger.opt(colors=True).info(
             f"+-----------------------------+---------------------------------+-----------------------------+")
 
