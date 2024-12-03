@@ -192,9 +192,7 @@ class SingleStageCore(Core):
         # Data Memory Unit
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
-            self.ext_data_memory.write(
-                self.state.MEM["ALUresult"],
-                self.state.EX["Read_data2"])
+            self.ext_data_memory.write(self.state.MEM["ALUresult"], self.state.EX["Read_data2"])
         data_memory_output = None  # not found in state machine
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")
@@ -566,8 +564,8 @@ class FiveStageCore(Core):
         if self.state.MEM["wrt_mem"] == 1:
             logger.debug("Write data")
             self.ext_data_memory.write(
-                self.state.MEM["ALUresult"],  # ALU output (Addr (rs1) + imm)
-                self.state.MEM["Store_data"])  # rd2
+                address=self.state.MEM["ALUresult"],
+                data=self.state.MEM["Store_data"])  # rd2
         self.state.WB["read_data"] = None
         if self.state.MEM["rd_mem"] == 1:
             logger.debug("Read data")

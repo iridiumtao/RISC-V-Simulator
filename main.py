@@ -45,7 +45,7 @@ if __name__ == "__main__":
             break
 
         # test only
-        if fsCore.cycle > 30:
+        if fsCore.cycle > 200:
             logger.error("Five Stage Core is taking too long to execute. Exiting...")
             break
 

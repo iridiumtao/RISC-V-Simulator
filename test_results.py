@@ -60,16 +60,20 @@ def batch_run():
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase2'")
     os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase0'")
     os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase1'")
-    os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase2'")
+    # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase2'")
+    os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
 
 if __name__ == '__main__':
     # batch_run()
 
 
     stage_text = "FS"
-    testcase_dirs = ['testcase0', 'testcase1', 'testcase2']  # Add more test cases as needed
+    testcase_dirs = ['testcase0',
+                     'testcase1',
+                     # 'testcase2'
+                     ]  # Add more test cases as needed
     filenames = [
-        # f'{stage_text}_DMEMResult.txt',
+        f'{stage_text}_DMEMResult.txt',
         f'{stage_text}_RFResult.txt',
         # f'StateResult_{stage_text}.txt'
                  ]  # Add more filenames if necessary

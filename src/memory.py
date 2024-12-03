@@ -78,23 +78,23 @@ class DataMemory(object):
         logger.debug(f"Reading data {bin_str} from address {read_address:05b}")
         return int(bin_str, 2)
 
-    def write(self, address, write_data):
+    def write(self, address, data):
         """
         Write data to the data memory.
 
         Args:
             address (int): The address to write the data to.
-            write_data (int): The 32-bit binary data to write in integer format.
+            data (int): The 32-bit binary data to write in integer format.
         """
         # Convert the integer write_data to a 32-bit binary string
         if address < 0 or address >= MEM_SIZE:
             logger.error(f"Invalid address: {address}")
             return
-        logger.debug(f"Writing data {write_data} to address {address}")
+        logger.debug(f"Writing data {data} to address {address}")
 
         # Handle negative two's complement conversion
-        if write_data < 0:
-            write_data = (1 << 32) + write_data  # Convert to 2's complement 32-bit
+        if data < 0:
+            data = (1 << 32) + data  # Convert to 2's complement 32-bit
 
         # Explain: say write_data = -2
         # (1 << 32) generates 2^32
@@ -104,7 +104,7 @@ class DataMemory(object):
         # 4294967296 + (-2) = 4294967294
         #                   = 11111111111111111111111111111110 (32 bits)
 
-        binary_str = f"{write_data:032b}"
+        binary_str = f"{data:032b}"
 
         # Write each byte (8 bits) to the memory in order
         for i in range(4):
