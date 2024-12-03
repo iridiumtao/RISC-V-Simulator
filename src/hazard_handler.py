@@ -16,15 +16,20 @@ def forwarding_unit(state: State) -> (int, int):
     forward_a = 0b00
     forward_b = 0b00
 
+    hint_a = "EX"
+    hint_b = "EX"
+
     # EX/MEM forwarding (highest priority)
     if (state.MEM["wrt_enable"] and
             state.MEM["Wrt_reg_addr"] != 0 and
             state.MEM["Wrt_reg_addr"] == state.EX["Rs"]):
         forward_a = 0b10
+        hint_a = "MEM"
     if (state.MEM["wrt_enable"] and
             state.MEM["Wrt_reg_addr"] != 0 and
             state.MEM["Wrt_reg_addr"] == state.EX["Rt"]):
         forward_b = 0b10
+        hint_b = "MEM"
 
     # MEM/WB forwarding (only if EX/MEM does not handle it)
     if (state.WB["wrt_enable"] and
@@ -33,6 +38,7 @@ def forwarding_unit(state: State) -> (int, int):
                  state.MEM["Wrt_reg_addr"] == state.EX["Rs"]) and
             state.WB["Wrt_reg_addr"] == state.EX["Rs"]):
         forward_a = 0b01
+        hint_a = "WB"
 
     if (state.WB["wrt_enable"] and
             state.WB["Wrt_reg_addr"] != 0 and
@@ -40,9 +46,10 @@ def forwarding_unit(state: State) -> (int, int):
                  state.MEM["Wrt_reg_addr"] == state.EX["Rt"]) and
             state.WB["Wrt_reg_addr"] == state.EX["Rt"]):
         forward_b = 0b01
+        hint_b = "WB"
 
 
-    logger.debug(f"Forwarding: {forward_a:#b}, {forward_b:#b}")
+    logger.debug(f"Forwarding: {forward_a:#b} (Source:{hint_a}), {forward_b:#b} (Source:{hint_b})")
 
     return forward_a, forward_b
 

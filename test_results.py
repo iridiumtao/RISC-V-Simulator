@@ -58,10 +58,10 @@ def batch_run():
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase0'")
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase1'")
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase2'")
-    os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase0'")
+    # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase0'")
     os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase1'")
     # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase2'")
-    os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
+    # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
 
 if __name__ == '__main__':
     batch_run()
@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     stage_text = "FS"
     testcase_dirs = ['testcase0',
-                     # 'testcase1',
+                      'testcase1',
                      # 'testcase2'
                      ]  # Add more test cases as needed
     filenames = [
