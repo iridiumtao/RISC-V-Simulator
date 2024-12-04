@@ -4,7 +4,7 @@ from loguru import logger
 from src.state import State
 
 
-def forwarding_unit(state: State) -> (int, int):
+def forwarding_unit(state: State, next_state: State) -> (int, int):
     """
 
     Determines the forwarding paths for the EX stage to resolve data hazards.
@@ -20,31 +20,31 @@ def forwarding_unit(state: State) -> (int, int):
     hint_b = "EX"
 
     # EX/MEM forwarding (highest priority)
-    if (state.MEM["wrt_enable"] and
-            state.MEM["Wrt_reg_addr"] != 0 and
-            state.MEM["Wrt_reg_addr"] == state.EX["Rs"]):
+    if (next_state.MEM["wrt_enable"] and
+            next_state.MEM["Wrt_reg_addr"] != 0 and
+            next_state.MEM["Wrt_reg_addr"] == next_state.EX["Rs"]):
         forward_a = 0b10
         hint_a = "MEM"
-    if (state.MEM["wrt_enable"] and
-            state.MEM["Wrt_reg_addr"] != 0 and
-            state.MEM["Wrt_reg_addr"] == state.EX["Rt"]):
+    if (next_state.MEM["wrt_enable"] and
+            next_state.MEM["Wrt_reg_addr"] != 0 and
+            next_state.MEM["Wrt_reg_addr"] == next_state.EX["Rt"]):
         forward_b = 0b10
         hint_b = "MEM"
 
     # MEM/WB forwarding (only if EX/MEM does not handle it)
     if (state.WB["wrt_enable"] and
             state.WB["Wrt_reg_addr"] != 0 and
-            not (state.MEM["wrt_enable"] and
-                 state.MEM["Wrt_reg_addr"] == state.EX["Rs"]) and
-            state.WB["Wrt_reg_addr"] == state.EX["Rs"]):
+            not (next_state.MEM["wrt_enable"] and
+                 next_state.MEM["Wrt_reg_addr"] == next_state.EX["Rs"]) and
+            state.WB["Wrt_reg_addr"] == next_state.EX["Rs"]):
         forward_a = 0b01
         hint_a = "WB"
 
     if (state.WB["wrt_enable"] and
             state.WB["Wrt_reg_addr"] != 0 and
-            not (state.MEM["wrt_enable"] and
-                 state.MEM["Wrt_reg_addr"] == state.EX["Rt"]) and
-            state.WB["Wrt_reg_addr"] == state.EX["Rt"]):
+            not (next_state.MEM["wrt_enable"] and
+                 next_state.MEM["Wrt_reg_addr"] == next_state.EX["Rt"]) and
+            state.WB["Wrt_reg_addr"] == next_state.EX["Rt"]):
         forward_b = 0b01
         hint_b = "WB"
 

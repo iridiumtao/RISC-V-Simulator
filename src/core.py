@@ -497,11 +497,8 @@ class FiveStageCore(Core):
         # PC adder
         self.next_state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
 
-        if self.cycle == 7:
-            print("cycle = 7")
-
         """Forwarding Unit"""
-        forward_a, forward_b = forwarding_unit(self.next_state)
+        forward_a, forward_b = forwarding_unit(self.state, self.next_state)
 
         alu_input_a = multiplexer(forward_a,
                                   self.state.EX["Read_data1"],  # 00
