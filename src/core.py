@@ -335,6 +335,10 @@ class FiveStageCore(Core):
         logger.info(f"state: {self.state.IF}")
         logger.info(f"next_state: {self.next_state.IF}")
 
+        if self.state.IF["Flush"]:
+            logger.warning(f"IF stage Flush")
+            return
+
         # Conform to the assignment hidden requirements
         if self.ext_instruction_memory.read(self.state.IF["PC"]) == 0b11111111111111111111111111111111:
             self.halt_detected = True
@@ -376,6 +380,10 @@ class FiveStageCore(Core):
         logger.info(f"next_state: {self.next_state.ID}")
         if self.state.ID["nop"]:
             logger.warning(f"ID stage No Operation")
+
+            # Zero out the Register File output
+            self.next_state.EX = {key: 0 for key in self.next_state.EX}
+            self.next_state.EX["nop"] = True
             return
 
         # This will stop the stage in the next cycle
@@ -465,6 +473,12 @@ class FiveStageCore(Core):
         self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
                                                               xor_gate(self.state.MEM["ALUZero"],
                                                                        self.state.MEM["bne"])))
+
+        # if branch taken
+        if self.pc_src:
+            self.state.IF["Flush"] = True
+            self.next_state.ID["nop"] = True
+
         logger.debug(
             f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
 
