@@ -340,13 +340,14 @@ class FiveStageCore(Core):
         if self.cycle == 7:
             print("cycle = 7")
 
+        """Condition Handlers, will not fetch instruction"""
         # When branch is taken, flush IF
         if self.state.IF["Flush"]:
             logger.warning(f"IF stage detected branch, Flush")
             # bad practice
-            self.next_state.IF["PC"] = adder(4, self.state.IF["PC"])
-            self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
-            self.next_state.IF["BranchPC"] = self.state.IF["BranchPC"]
+            # self.next_state.IF["PC"] = adder(4, self.state.IF["PC"])
+            # self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
+            # self.next_state.IF["BranchPC"] = self.state.IF["BranchPC"]
             self.next_state.ID["nop"] = True
             self.next_state.EX["nop"] = True
             return
@@ -368,30 +369,36 @@ class FiveStageCore(Core):
             # self.next_state.ID["PC"] =
             return
 
-        # PCWrite from Hazard Detection Unit
+        """Decide which PC to use"""
+
+        # Decide PC depends on whether Branch happen (PCSrc=1) or not
+        self.state.IF["PC"] = multiplexer(self.next_state.IF["PCSrc"],
+                                      self.state.IF["PC"],
+                                      self.next_state.IF["BranchPC"])
+
+        logger.info(f"PC: {self.state.IF["PC"]}")
+
+        # Basically a MUX but lazy version
+        # if Hazard happen (IFIDWrite=0), the Instr is not updated
+        if self.next_state.IF["IFIDWrite"]:
+            self.next_state.ID["Instr"] = self.ext_instruction_memory.read(self.state.IF["PC"])
+            self.next_state.ID["PC"] = self.state.IF["PC"]
+        else:
+            logger.warning(f"Hazard happen (IFIDWrite=0), Instruction not updated")
+            self.next_state.ID["Instr"] = self.state.ID["Instr"]
+            self.next_state.ID["PC"] = self.state.ID["PC"]
+
+        self.logger_instruction()
+
+        """Next PC"""
+        # Decide PC depends on whether Hazard happen (PCWrite=0) or not
         # if PCWrite is 0, the PC is not updated
         if_stage_pc_result = multiplexer(self.next_state.IF["PCWrite"],
                                          self.state.IF["PC"],
                                          adder(4, self.state.IF["PC"]))
+        self.next_state.IF["PC"] = if_stage_pc_result
+        logger.debug(f"PC Handling debug: Next PC: {self.next_state.IF["PC"]}")
 
-        self.next_state.ID["PC"] = self.state.IF["PC"]  # todo: looks weird
-        logger.opt(colors=True).info(f"<green>PC: {self.next_state.ID['PC']}</green>")
-
-        # Basically a MUX but lazy version
-        # if IFIDWrite is 0, the Instr is not updated
-        if self.next_state.IF["IFIDWrite"]:
-            self.next_state.ID["Instr"] = self.ext_instruction_memory.read(self.next_state.IF["PC"])
-        else:
-            logger.warning(f"IFIDWrite is 0, Instruction not updated")
-
-        self.logger_instruction()
-
-        program_counter = multiplexer(self.next_state.IF["PCSrc"], if_stage_pc_result, self.next_state.IF["BranchPC"])
-        if self.state.IF["PCSrc"]:
-            self.next_state.ID["nop"] = True
-        logger.debug(f"PC Handling debug: Next PC: {program_counter}")
-        # next PC
-        self.next_state.IF["PC"] = program_counter
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
@@ -498,7 +505,7 @@ class FiveStageCore(Core):
         # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
         # todo: When LW BNE, we need to insect TWO stalls and forward the data from MEM stage
         # PC adder
-        self.state.IF["BranchPC"] = adder(self.state.ID["PC"], imm_gen_result)
+        self.next_state.IF["BranchPC"] = adder(self.state.ID["PC"], imm_gen_result)
 
         # Determine if the branch should be taken
         # todo: is_taken = (R1_value == R2_value)
@@ -523,17 +530,17 @@ class FiveStageCore(Core):
 
         # Branch handling, BEQ, BNE handling, JAL handling
         # todo: maybe `next_state`, check with StateResult_FS.txt afterward
-        self.state.IF["PCSrc"] = or_gate(jal, and_gate(branch,
+        self.next_state.IF["PCSrc"] = or_gate(jal, and_gate(branch,
                                                        xor_gate(is_branch_taken,
                                                                 bne_func)))
 
         # if branch taken
-        if self.state.IF["PCSrc"]:
+        if self.next_state.IF["PCSrc"]:
             self.state.IF["Flush"] = True
             self.next_state.ID["nop"] = True
 
         logger.debug(
-            f"PC Handling debug: pc_src: {self.state.IF["PCSrc"]}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, branchPC: {self.state.IF["BranchPC"]}")
+            f"Branch Handling debug: pc_src: {self.next_state.IF["PCSrc"]}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, branchPC: {self.next_state.IF["BranchPC"]}")
 
 
         # clear EX stage if stall
