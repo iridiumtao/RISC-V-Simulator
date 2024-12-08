@@ -2,6 +2,7 @@ from typing import Tuple
 
 from loguru import logger
 from src.state import State
+from src.components import multiplexer
 
 
 def forwarding_unit(state: State, next_state: State) -> (int, int):
@@ -11,6 +12,7 @@ def forwarding_unit(state: State, next_state: State) -> (int, int):
     Ref: Comp.Org P.320
 
     :param state: The current state of the pipeline, containing pipeline registers.
+    :param next_state:
     :return: A tuple (forward_a, forward_b) indicating the forwarding paths for source operands.
     """
     forward_a = 0b00
@@ -82,6 +84,45 @@ def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
     return PCWrite, IDWrite, stall
 
 
+def forwarding_unit_for_branch(rs1: int, rs2: int, state: State) -> (int, int):
+    """
+    Determines the forwarding paths for the ID stage to resolve data hazards for branch instructions.
+
+    :param rs1: source registers used by the branch instruction.
+    :param rs2: source registers used by the branch instruction.
+    :param state: The current state of the pipeline, containing pipeline registers.
+    :return: A tuple (forward_a, forward_b) indicating the forwarding paths for source operands.
+    """
+    forward_a = 0b00  # Default: Use value from the register file
+    forward_b = 0b00
+
+    # EX/MEM forwarding (highest priority)
+    if (state.MEM["wrt_enable"] and
+            state.MEM["Wrt_reg_addr"] != 0 and
+            state.MEM["Wrt_reg_addr"] == rs1):
+        forward_a = 0b10
+    if (state.MEM["wrt_enable"] and
+            state.MEM["Wrt_reg_addr"] != 0 and
+            state.MEM["Wrt_reg_addr"] == rs2):
+        forward_b = 0b10
+
+    # MEM/WB forwarding (only if EX/MEM does not handle it)
+    if (state.WB["wrt_enable"] and
+            state.WB["Wrt_reg_addr"] != 0 and
+            not (state.MEM["wrt_enable"] and
+                 state.MEM["Wrt_reg_addr"] == rs1) and
+            state.WB["Wrt_reg_addr"] == rs1):
+        forward_a = 0b01
+    if (state.WB["wrt_enable"] and
+            state.WB["Wrt_reg_addr"] != 0 and
+            not (state.MEM["wrt_enable"] and
+                 state.MEM["Wrt_reg_addr"] == rs2) and
+            state.WB["Wrt_reg_addr"] == rs2):
+        forward_b = 0b01
+
+    return forward_a, forward_b
+
+
 # 模擬不同狀態的 State class
 from unittest import TestCase
 
@@ -139,3 +180,27 @@ class TestForwardingUnit(TestCase):
         forward_a, forward_b = forwarding_unit(self.state)
         self.assertEqual(forward_a, 0b10)  # EX/MEM 應優先
         self.assertEqual(forward_b, 0b00)
+
+    def test_forwarding_unit_for_branch(self):
+        # 模擬 pipeline 狀態
+        state = State()
+        state.MEM = {"wrt_enable": True, "Wrt_reg_addr": 3, "ALUresult": 42}
+        state.WB = {"wrt_enable": True, "Wrt_reg_addr": 4, "Wrt_data": 99}
+        state.ID = {"Rs1": 3, "Rs2": 4, "Read_data1": 10, "Read_data2": 20}
+        print(state)
+
+        # 測試 forwarding
+        forward_a, forward_b = forwarding_unit_for_branch(3, 4, state)
+
+        # 期望結果
+        assert forward_a == 0b10, f"Expected 0b10, got {forward_a}"
+        assert forward_b == 0b01, f"Expected 0b01, got {forward_b}"
+
+        # 使用 multiplexer 測試數值
+        operand_a = multiplexer(forward_a, state.ID["Read_data1"], state.WB["Wrt_data"], state.MEM["ALUresult"])
+        operand_b = multiplexer(forward_b, state.ID["Read_data2"], state.WB["Wrt_data"], state.MEM["ALUresult"])
+
+        assert operand_a == 42, f"Expected 42, got {operand_a}"
+        assert operand_b == 99, f"Expected 99, got {operand_b}"
+
+        print("All tests passed!")

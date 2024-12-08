@@ -5,7 +5,7 @@ from loguru import logger
 
 from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, \
     xor_gate, or_gate
-from src.hazard_handler import forwarding_unit, hazard_detection_unit
+from src.hazard_handler import forwarding_unit, hazard_detection_unit, forwarding_unit_for_branch
 from src.memory import InstructionMemory, DataMemory
 from src.register_file import RegisterFile
 from src.state import State
@@ -291,8 +291,7 @@ class FiveStageCore(Core):
 
         # --------------------- EX stage ---------------------
 
-        if (self.cycle == 7):
-            print("cycle = 7")
+
 
         self.ex_stage()
         temp_nop["ex"] = self.state.EX["nop"]
@@ -308,9 +307,13 @@ class FiveStageCore(Core):
 
         # --------------------- IF stage ---------------------
 
+        if (self.cycle == 7):
+            print("cycle = 7")
+
         # Only fetch new instructions if HALT hasn't been detected
         if not self.halt_detected:
             self.if_stage()
+            logger.info(f"next_state: {self.next_state.IF}")
             temp_nop["if"] = self.state.IF["nop"]
         else:
             logger.warning(f"IF stage No Operation")
@@ -333,14 +336,25 @@ class FiveStageCore(Core):
     def if_stage(self):
         logger.debug(f"--------------------- IF stage ")
         logger.info(f"state: {self.state.IF}")
-        logger.info(f"next_state: {self.next_state.IF}")
 
+        if self.cycle == 7:
+            print("cycle = 7")
+
+        # When branch is taken, flush IF
         if self.state.IF["Flush"]:
-            logger.warning(f"IF stage Flush")
+            logger.warning(f"IF stage detected branch, Flush")
+            # bad practice
+            self.next_state.IF["PC"] = adder(4, self.state.IF["PC"])
+            self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
+            self.next_state.IF["BranchPC"] = self.state.IF["BranchPC"]
+            self.next_state.ID["nop"] = True
+            self.next_state.EX["nop"] = True
             return
 
         # Conform to the assignment hidden requirements
-        if self.ext_instruction_memory.read(self.state.IF["PC"]) == 0b11111111111111111111111111111111:
+        # HALT the machine when the instruction is 0xFFFFFFFF
+        if (self.ext_instruction_memory.read(self.state.IF["PC"]) == 0b11111111111111111111111111111111
+                and not self.next_state.IF["PCSrc"]):
             self.halt_detected = True
             self.next_state.IF["nop"] = True
             self.next_state.ID["nop"] = True
@@ -349,15 +363,18 @@ class FiveStageCore(Core):
 
         if self.state.IF["nop"]:
             logger.warning(f"IF stage No Operation")
+            # todo: maybe ?
+            # self.next_state.ID["Instr"] =
+            # self.next_state.ID["PC"] =
             return
 
         # PCWrite from Hazard Detection Unit
         # if PCWrite is 0, the PC is not updated
-        self.if_stage_pc_result = multiplexer(self.next_state.IF["PCWrite"],
-                                              self.state.IF["PC"],
-                                              adder(4, self.state.IF["PC"]))
+        if_stage_pc_result = multiplexer(self.next_state.IF["PCWrite"],
+                                         self.state.IF["PC"],
+                                         adder(4, self.state.IF["PC"]))
 
-        self.next_state.ID["PC"] = self.state.IF["PC"]
+        self.next_state.ID["PC"] = self.state.IF["PC"]  # todo: looks weird
         logger.opt(colors=True).info(f"<green>PC: {self.next_state.ID['PC']}</green>")
 
         # Basically a MUX but lazy version
@@ -369,7 +386,9 @@ class FiveStageCore(Core):
 
         self.logger_instruction()
 
-        program_counter = multiplexer(self.pc_src, self.if_stage_pc_result, self.mem_stage_pc_result)
+        program_counter = multiplexer(self.next_state.IF["PCSrc"], if_stage_pc_result, self.next_state.IF["BranchPC"])
+        if self.state.IF["PCSrc"]:
+            self.next_state.ID["nop"] = True
         logger.debug(f"PC Handling debug: Next PC: {program_counter}")
         # next PC
         self.next_state.IF["PC"] = program_counter
@@ -384,6 +403,8 @@ class FiveStageCore(Core):
             # Zero out the Register File output
             self.next_state.EX = {key: 0 for key in self.next_state.EX}
             self.next_state.EX["nop"] = True
+            self.state.IF["BranchPC"] = 0
+            self.state.IF["PCSrc"] = 0
             return
 
         # This will stop the stage in the next cycle
@@ -410,6 +431,7 @@ class FiveStageCore(Core):
         self.next_state.EX["instr"] = self.state.ID["Instr"]
 
         """Hazard Detection Unit"""
+        # todo: IF["PCWrite"] and IF["IFIDWrite"] would be identical, maybe we can merge them
         self.next_state.IF["PCWrite"], self.next_state.IF["IFIDWrite"], stall = hazard_detection_unit(self.next_state)
 
         # Forward to next pipeline register AFTER hazard detection unit
@@ -427,8 +449,8 @@ class FiveStageCore(Core):
             self.next_state.EX["nop"] = True
             self.next_state.EX["alu_op"] = 0
             self.next_state.EX["is_I_type"] = 0
-            self.next_state.EX["branch"] = 0
-            self.next_state.EX["jal"] = 0
+            branch = 0
+            jal = 0
             self.next_state.EX["rd_mem"] = 0
             self.next_state.EX["wrt_mem"] = 0
             self.next_state.EX["mem_to_reg"] = 0
@@ -437,9 +459,9 @@ class FiveStageCore(Core):
             logger.debug(f"Control Signals: {control_signals}")
             self.next_state.EX["alu_op"] = control_signals["ALUOp"]  # EX stage
             self.next_state.EX["is_I_type"] = control_signals["ALUSrcB"]  # EX stage
-            self.next_state.EX["branch"] = control_signals[
-                "Branch"]  # MEM stage, but not found for Single Stage Machine
-            self.next_state.EX["jal"] = control_signals["JAL"]
+            branch = control_signals[
+                "Branch"]
+            jal = control_signals["JAL"]
             self.next_state.EX["rd_mem"] = control_signals["MemRead"]  # MEM stage
             self.next_state.EX["wrt_mem"] = control_signals["MemWrite"]  # MEM stage
             self.next_state.EX["mem_to_reg"] = control_signals[
@@ -454,7 +476,8 @@ class FiveStageCore(Core):
         self.next_state.EX["Read_data2"] = self.register_file.read(rs2)
 
         """Imm Gen"""
-        self.next_state.EX["Imm"] = imm_gen(opcode=opcode, instr=self.next_state.EX["instr"])
+        imm_gen_result = imm_gen(opcode=opcode, instr=self.next_state.EX["instr"])
+        self.next_state.EX["Imm"] = imm_gen_result
         # special ALU handling, if I-type, omit the func7 bit
         # I didn't find this in the book, without this, ALU cannot work on I-type
         if opcode == 19:  # I-type
@@ -462,25 +485,56 @@ class FiveStageCore(Core):
         # todo: see if we can merge the two if statements
         if opcode == 19 or opcode == 3:
             self.next_state.EX["Rt"] = 0  # I-type doesn't have Rt (prevent problem from hazard detection unit)
+
+        # the function code to determine if the instruction is a BEQ or BNE
+        bne_func = (alu_control_func_code & 0x1)
         self.next_state.EX["alu_control_func"] = alu_control_func_code
+        logger.debug(
+            f"PC Handling debug: alu_control_func_code: {alu_control_func_code}, bne_func: {bne_func}")
 
         self.logger_data_memory_result()
 
         """Branch condition"""
         # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
+        # todo: When LW BNE, we need to insect TWO stalls and forward the data from MEM stage
+        # PC adder
+        self.state.IF["BranchPC"] = adder(self.state.ID["PC"], imm_gen_result)
+
+        # Determine if the branch should be taken
+        # todo: is_taken = (R1_value == R2_value)
+        # todo: modify MEM["ALUZero"], check the logic
+
+
+        # Use forwarding unit to determine source for Rs1 and Rs2
+        forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state)
+
+        # Get the operand values for the branch instruction
+        branch_operand_a = multiplexer(forward_a,
+                                       rs1,  # 00: from Register File
+                                       self.state.WB["Wrt_data"],  # 01: from MEM/WB
+                                       self.state.MEM["ALUresult"])  # 10: from EX/MEM
+        branch_operand_b = multiplexer(forward_b,
+                                       rs2,
+                                       self.state.WB["Wrt_data"],
+                                       self.state.MEM["ALUresult"])
+
+        # Determine if the branch is taken (used to be ALUZero)
+        is_branch_taken = (branch_operand_a - branch_operand_b) == 0
+
         # Branch handling, BEQ, BNE handling, JAL handling
-        # presumably, next pc src
-        self.pc_src = or_gate(self.state.MEM["jal"], and_gate(self.state.MEM["branch"],
-                                                              xor_gate(self.state.MEM["ALUZero"],
-                                                                       self.state.MEM["bne"])))
+        # todo: maybe `next_state`, check with StateResult_FS.txt afterward
+        self.state.IF["PCSrc"] = or_gate(jal, and_gate(branch,
+                                                       xor_gate(is_branch_taken,
+                                                                bne_func)))
 
         # if branch taken
-        if self.pc_src:
+        if self.state.IF["PCSrc"]:
             self.state.IF["Flush"] = True
             self.next_state.ID["nop"] = True
 
         logger.debug(
-            f"PC Handling debug: pc_src: {self.pc_src}, branch: {self.state.MEM["branch"]}, zero: {self.state.MEM["ALUZero"]}, bne_func: {self.state.MEM["bne"]}")
+            f"PC Handling debug: pc_src: {self.state.IF["PCSrc"]}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, branchPC: {self.state.IF["BranchPC"]}")
+
 
         # clear EX stage if stall
         if stall:
@@ -507,9 +561,6 @@ class FiveStageCore(Core):
         # This will stop the stage in the next cycle
         if self.state.ID["nop"] and self.halt_detected:
             self.next_state.EX["nop"] = True
-
-        # PC adder
-        self.next_state.MEM["PC"] = adder(self.state.EX["PC"], self.state.EX["Imm"])
 
         """Forwarding Unit"""
         forward_a, forward_b = forwarding_unit(self.state, self.next_state)
@@ -562,11 +613,11 @@ class FiveStageCore(Core):
             alu_control=alu_control,
             a=alu_input_a,
             b=alu_input_b)
-        bne_func = (self.state.EX["alu_control_func"] & 0x1)
-        logger.debug(
-            f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
-        self.next_state.MEM["bne"] = bne_func
-        self.next_state.MEM["ALUZero"] = zero
+        # bne_func = (self.state.EX["alu_control_func"] & 0x1)
+        # logger.debug(
+        #     f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
+        # self.next_state.MEM["bne"] = bne_func
+        # self.next_state.MEM["ALUZero"] = zero
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
@@ -592,8 +643,6 @@ class FiveStageCore(Core):
         # (see Comp.Org p.313 Figure 4.52)
         self.next_state.WB["wrt_enable"] = self.state.MEM["wrt_enable"]
         self.next_state.WB["mem_to_reg"] = self.state.MEM["mem_to_reg"]
-
-        self.mem_stage_pc_result = self.state.MEM["PC"]
 
         """Data Memory Unit"""
         if self.state.MEM["wrt_mem"] == 1:

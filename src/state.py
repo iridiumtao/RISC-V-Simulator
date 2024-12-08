@@ -1,13 +1,15 @@
 class State(object):
     def __init__(self):
-        self.IF = {"nop": False, "PC": 0, "PCWrite": 0, "IFIDWrite": 0, "Flush": False}
+        self.IF = {"nop": False, "PC": 0, "PCWrite": 0, "IFIDWrite": 0, "Flush": False, "PCSrc": 0, "BranchPC": 0}
         """ Instruction Fetch. Read 4 lines of the IMEM file 
         
         { nop: No Operation, 
           PC: Program Counter,
-          * PCWrite: Output of the control unit,
-          * IFIDWrite: Output of the control unit,
-          * Flush: When branch is taken, flush IF
+          * PCWrite: Output of Hazard Detection Unit, determines whether IF["PC"] + 4 or not,
+          * IFIDWrite: Output of Hazard Detection Unit, determines whether to update ID["Instr"],
+          * Flush: When branch is taken, flush IF,
+          * PCSrc: Output of Branch Condition, 0: PC + 4, 1: PC + Imm
+          * BranchPC: PC + Imm, will be used when branch is taken, comes from ID stage
           }
         
         
