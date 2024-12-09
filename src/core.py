@@ -344,6 +344,7 @@ class FiveStageCore(Core):
         # When branch is taken, flush IF
         if self.state.IF["Flush"]:
             logger.warning(f"IF stage detected branch, Flush")
+            # todo: to conform to the assignment hidden requirements, we need to update the PC here
             # bad practice
             # self.next_state.IF["PC"] = adder(4, self.state.IF["PC"])
             # self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
@@ -539,9 +540,10 @@ class FiveStageCore(Core):
         if self.next_state.IF["PCSrc"]:
             self.state.IF["Flush"] = True
             self.next_state.ID["nop"] = True
-            # BNE, BEQ do not execute EX and the following stages, but JAL does
-            if not jal:
-                self.next_state.EX["nop"] = True
+
+        # BNE, BEQ do not execute EX and the following stages, but JAL does
+        if branch:
+            self.next_state.EX["nop"] = True
 
         # Handle JAL calculation (to comform with the assignment, i.e., EX.Read_data1 = PC, EX.Read_data2 = 4)
         if jal:

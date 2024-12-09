@@ -64,7 +64,7 @@ def batch_run():
     # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
 
 if __name__ == '__main__':
-    # batch_run()
+    batch_run()
 
 
     stage_text = "FS"
