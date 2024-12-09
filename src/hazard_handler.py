@@ -107,17 +107,17 @@ def forwarding_unit_for_branch(rs1: int, rs2: int, state: State, next_state: Sta
         forward_b = 0b10
 
     # MEM/WB forwarding (only if EX/MEM does not handle it)
-    if (state.WB["wrt_enable"] and
-            state.WB["Wrt_reg_addr"] != 0 and
+    if (next_state.WB["wrt_enable"] and
+            next_state.WB["Wrt_reg_addr"] != 0 and
             not (next_state.MEM["wrt_enable"] and
                  next_state.MEM["Wrt_reg_addr"] == rs1) and
-            state.WB["Wrt_reg_addr"] == rs1):
+            next_state.WB["Wrt_reg_addr"] == rs1):
         forward_a = 0b01
-    if (state.WB["wrt_enable"] and
-            state.WB["Wrt_reg_addr"] != 0 and
+    if (next_state.WB["wrt_enable"] and
+            next_state.WB["Wrt_reg_addr"] != 0 and
             not (next_state.MEM["wrt_enable"] and
                  next_state.MEM["Wrt_reg_addr"] == rs2) and
-            state.WB["Wrt_reg_addr"] == rs2):
+            next_state.WB["Wrt_reg_addr"] == rs2):
         forward_b = 0b01
 
     return forward_a, forward_b

@@ -516,14 +516,17 @@ class FiveStageCore(Core):
         forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state, self.next_state)
         logger.debug(f"Branch forwarding debug: forward_a: {forward_a}, forward_b: {forward_b}")
 
+        if self.cycle == 3:
+            print("cycle = 3")
+
         # Get the operand values for the branch instruction
         branch_operand_a = multiplexer(forward_a,
                                        self.next_state.EX["Read_data1"],  # 00: from Register File
-                                       self.state.WB["Wrt_data"],  # 01: from MEM/WB
+                                       self.next_state.WB["Wrt_data"],  # 01: from MEM/WB
                                        self.next_state.MEM["ALUresult"])  # 10: from EX/MEM
         branch_operand_b = multiplexer(forward_b,
                                        self.next_state.EX["Read_data2"],
-                                       self.state.WB["Wrt_data"],
+                                       self.next_state.WB["Wrt_data"],
                                        self.next_state.MEM["ALUresult"])
 
         # Determine if the branch is taken (used to be ALUZero)
