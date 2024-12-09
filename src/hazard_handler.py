@@ -84,7 +84,7 @@ def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
     return PCWrite, IDWrite, stall
 
 
-def forwarding_unit_for_branch(rs1: int, rs2: int, state: State) -> (int, int):
+def forwarding_unit_for_branch(rs1: int, rs2: int, state: State, next_state: State) -> (int, int):
     """
     Determines the forwarding paths for the ID stage to resolve data hazards for branch instructions.
 
@@ -97,26 +97,26 @@ def forwarding_unit_for_branch(rs1: int, rs2: int, state: State) -> (int, int):
     forward_b = 0b00
 
     # EX/MEM forwarding (highest priority)
-    if (state.MEM["wrt_enable"] and
-            state.MEM["Wrt_reg_addr"] != 0 and
-            state.MEM["Wrt_reg_addr"] == rs1):
+    if (next_state.MEM["wrt_enable"] and
+            next_state.MEM["Wrt_reg_addr"] != 0 and
+            next_state.MEM["Wrt_reg_addr"] == rs1):
         forward_a = 0b10
-    if (state.MEM["wrt_enable"] and
-            state.MEM["Wrt_reg_addr"] != 0 and
-            state.MEM["Wrt_reg_addr"] == rs2):
+    if (next_state.MEM["wrt_enable"] and
+            next_state.MEM["Wrt_reg_addr"] != 0 and
+            next_state.MEM["Wrt_reg_addr"] == rs2):
         forward_b = 0b10
 
     # MEM/WB forwarding (only if EX/MEM does not handle it)
     if (state.WB["wrt_enable"] and
             state.WB["Wrt_reg_addr"] != 0 and
-            not (state.MEM["wrt_enable"] and
-                 state.MEM["Wrt_reg_addr"] == rs1) and
+            not (next_state.MEM["wrt_enable"] and
+                 next_state.MEM["Wrt_reg_addr"] == rs1) and
             state.WB["Wrt_reg_addr"] == rs1):
         forward_a = 0b01
     if (state.WB["wrt_enable"] and
             state.WB["Wrt_reg_addr"] != 0 and
-            not (state.MEM["wrt_enable"] and
-                 state.MEM["Wrt_reg_addr"] == rs2) and
+            not (next_state.MEM["wrt_enable"] and
+                 next_state.MEM["Wrt_reg_addr"] == rs2) and
             state.WB["Wrt_reg_addr"] == rs2):
         forward_b = 0b01
 

@@ -349,7 +349,6 @@ class FiveStageCore(Core):
             # self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
             # self.next_state.IF["BranchPC"] = self.state.IF["BranchPC"]
             self.next_state.ID["nop"] = True
-            self.next_state.EX["nop"] = True
             return
 
         # Conform to the assignment hidden requirements
@@ -513,19 +512,24 @@ class FiveStageCore(Core):
 
 
         # Use forwarding unit to determine source for Rs1 and Rs2
-        forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state)
+        forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state, self.next_state)
+        logger.debug(f"Branch forwarding debug: forward_a: {forward_a}, forward_b: {forward_b}")
 
         # Get the operand values for the branch instruction
         branch_operand_a = multiplexer(forward_a,
-                                       rs1,  # 00: from Register File
+                                       self.next_state.EX["Read_data1"],  # 00: from Register File
                                        self.state.WB["Wrt_data"],  # 01: from MEM/WB
-                                       self.state.MEM["ALUresult"])  # 10: from EX/MEM
+                                       self.next_state.MEM["ALUresult"])  # 10: from EX/MEM
         branch_operand_b = multiplexer(forward_b,
-                                       rs2,
+                                       self.next_state.EX["Read_data2"],
                                        self.state.WB["Wrt_data"],
-                                       self.state.MEM["ALUresult"])
+                                       self.next_state.MEM["ALUresult"])
+
+        if self.cycle == 23:
+            print("cycle = 23")
 
         # Determine if the branch is taken (used to be ALUZero)
+        logger.debug(f"Branch Handling debug: branch_operand_a: {branch_operand_a}, branch_operand_b: {branch_operand_b}")
         is_branch_taken = (branch_operand_a - branch_operand_b) == 0
 
         # Branch handling, BEQ, BNE handling, JAL handling
@@ -538,10 +542,12 @@ class FiveStageCore(Core):
         if self.next_state.IF["PCSrc"]:
             self.state.IF["Flush"] = True
             self.next_state.ID["nop"] = True
+            # BNE, BEQ do not execute EX and the following stages, but JAL does
+            if not jal:
+                self.next_state.EX["nop"] = True
 
         logger.debug(
-            f"Branch Handling debug: pc_src: {self.next_state.IF["PCSrc"]}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, branchPC: {self.next_state.IF["BranchPC"]}")
-
+            f"Branch Handling debug: pc_src: {self.next_state.IF['PCSrc']}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, jal: {jal}")
 
         # clear EX stage if stall
         if stall:
