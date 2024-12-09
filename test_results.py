@@ -13,8 +13,8 @@ project_root = Path()
 def compare_files(testcases, filenames, stage_text: Literal["FS", "SS"]):
     for testcase in testcases:
         # Rename: Move SS_/RFResult.txt to testcase0 and rename SS_RFResult.txt
-        old_path = project_root / f'Sample_Testcases_{stage_text}' / 'input' / testcase / f'{stage_text}_' / 'RFResult.txt'
-        new_path = project_root / f'Sample_Testcases_{stage_text}' / 'input' / testcase / f'{stage_text}_RFResult.txt'
+        old_path = project_root / f'Sample_Testcases_FS' / 'input' / testcase / f'{stage_text}_' / 'RFResult.txt'
+        new_path = project_root / f'Sample_Testcases_FS' / 'input' / testcase / f'{stage_text}_RFResult.txt'
 
         if old_path.exists():
             new_path.parent.mkdir(parents=True, exist_ok=True)
@@ -23,8 +23,8 @@ def compare_files(testcases, filenames, stage_text: Literal["FS", "SS"]):
         # Run tests
         # batch run result would be stored in input folder (as it is seen as io_dir)
         # and the expected result is stored in output folder
-        input_path = project_root / f'Sample_Testcases_{stage_text}' / 'input' / testcase
-        output_path = project_root / f'Sample_Testcases_{stage_text}' / 'output' / testcase
+        input_path = project_root / f'Sample_Testcases_FS' / 'input' / testcase
+        output_path = project_root / f'Sample_Testcases_FS' / 'output' / testcase
 
         for filename in filenames:
             input_file = input_path / filename
@@ -64,10 +64,22 @@ def batch_run():
     # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
 
 if __name__ == '__main__':
-    batch_run()
+    # batch_run()
 
 
     stage_text = "FS"
+    testcase_dirs = ['testcase0',
+                     'testcase1',
+                     'testcase2'
+                     ]  # Add more test cases as needed
+    filenames = [
+        f'{stage_text}_DMEMResult.txt',
+        f'{stage_text}_RFResult.txt',
+        # f'StateResult_{stage_text}.txt'
+                 ]  # Add more filenames if necessary
+    compare_files(testcase_dirs, filenames, stage_text)
+
+    stage_text = "SS"
     testcase_dirs = ['testcase0',
                       'testcase1',
                      'testcase2'
@@ -75,6 +87,6 @@ if __name__ == '__main__':
     filenames = [
         f'{stage_text}_DMEMResult.txt',
         f'{stage_text}_RFResult.txt',
-        # f'StateResult_{stage_text}.txt'
+        f'StateResult_{stage_text}.txt'
                  ]  # Add more filenames if necessary
     compare_files(testcase_dirs, filenames, stage_text)

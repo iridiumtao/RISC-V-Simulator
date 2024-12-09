@@ -189,6 +189,104 @@ def control_unit(opcode: int):
 
     return control_signals, halt
 
+def control_unit_for_single_stage(opcode: int):
+    control_signals = {
+        "JAL": 0,
+        "ALUSrcA": 0,
+        "ALUSrcB": 0b00,
+        "MemtoReg": 0,
+        "RegWrite": 0,
+        "MemRead": 0,
+        "MemWrite": 0,
+        "Branch": 0,
+        "ALUOp": 0x00
+    }
+
+    halt = False
+
+    if opcode == 0b0110011:  # R-type
+        logger.debug(f"Opcode: {opcode} (R-type)")
+        control_signals.update({
+            "ALUSrcA": 0,
+            "ALUSrcB": 0,
+            "MemtoReg": 0,
+            "RegWrite": 1,
+            "MemRead": 0,
+            "MemWrite": 0,
+            "Branch": 0,
+            "ALUOp": 0b10
+        })
+    elif opcode == 0b0010011:  # I-type
+        logger.debug(f"Opcode: {opcode} (I-type)")
+        control_signals.update({
+            "ALUSrcA": 0,
+            "ALUSrcB": 0b10,
+            "MemtoReg": 0,
+            "RegWrite": 1,
+            "MemRead": 0,
+            "MemWrite": 0,
+            "Branch": 0,
+            "ALUOp": 0b10
+        })
+    elif opcode == 0b0000011:  # Load
+        logger.debug(f"Opcode: {opcode} (Load)")
+        control_signals.update({
+            "ALUSrcA": 0,
+            "ALUSrcB": 0b10,
+            "MemtoReg": 1,
+            "RegWrite": 1,
+            "MemRead": 1,
+            "MemWrite": 0,
+            "Branch": 0,
+            "ALUOp": 0b00
+        })
+    elif opcode == 0b0100011:  # Store
+        logger.debug(f"Opcode: {opcode} (Store)")
+        control_signals.update({
+            "ALUSrcA": 0,
+            "ALUSrcB": 0b10,
+            "MemtoReg": 0,
+            "RegWrite": 0,
+            "MemRead": 0,
+            "MemWrite": 1,
+            "Branch": 0,
+            "ALUOp": 0b00
+        })
+    elif opcode == 0b1100011:  # Branch
+        logger.debug(f"Opcode: {opcode} (Branch)")
+        control_signals.update({
+            "ALUSrcA": 0,
+            "ALUSrcB": 0,
+            "MemtoReg": 0,
+            "RegWrite": 0,
+            "MemRead": 0,
+            "MemWrite": 0,
+            "Branch": 1,
+            "ALUOp": 0b01
+        })
+    elif opcode == 0b1101111:  # JAL
+        logger.debug(f"Opcode: {opcode} (JAL)")
+        control_signals.update({
+            "JAL": 1,
+            "ALUSrcA": 1,
+            "ALUSrcB": 0b1,
+            "MemtoReg": 0,
+            "RegWrite": 1,
+            "MemRead": 0,
+            "MemWrite": 0,
+            "Branch": 0,
+            "ALUOp": 0b10
+        })
+    elif opcode == 0b1111111:  # HALT
+        logger.debug(f"Opcode: {opcode} (HALT)")
+        halt = True
+    elif opcode == 0b0000000:  # 0
+        pass
+    else:
+        raise ValueError("Unsupported opcode")
+
+    return control_signals, halt
+
 def imm_gen(opcode: int, instr: int) -> int:
     """
     Generate the immediate value based on the opcode and instruction.

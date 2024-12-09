@@ -8,7 +8,7 @@ from src.components import arithmetic_logic_unit, alu_control_unit, adder, contr
 from src.hazard_handler import forwarding_unit, hazard_detection_unit, forwarding_unit_for_branch
 from src.memory import InstructionMemory, DataMemory
 from src.register_file import RegisterFile
-from src.state import State
+from src.state import State, SingleStageState
 
 
 class Core(object):
@@ -22,8 +22,6 @@ class Core(object):
         """ A flag to indicate STOP """
 
         self.ioDir = ioDir
-        self.state = State()
-        self.next_state = State()
         self.ext_instruction_memory = instruction_memory
         self.ext_data_memory = data_memory
 
@@ -42,6 +40,8 @@ class SingleStageCore(Core):
             instruction_memory (InstructionMemory): The instruction memory.
             data_memory (DataMemory): The data memory.
         """
+        self.state = SingleStageState()
+        self.next_state = SingleStageState()
         super(SingleStageCore, self).__init__(io_dir / "SS_", instruction_memory, data_memory)
         self.op_file_path = io_dir / "StateResult_SS.txt"
 
@@ -238,7 +238,7 @@ class SingleStageCore(Core):
         Print the state of the processor after each cycle.
 
         Args:
-            state (State): The current state of the processor.
+            state (SingleStageState): The current state of the processor.
             cycle (int): The current cycle number.
         """
         printstate = ["-" * 70 + "\n", "State after executing cycle: " + str(cycle) + "\n"]
@@ -261,6 +261,8 @@ class FiveStageCore(Core):
 
     def __init__(self, io_dir, instruction_memory, data_memory):
         super(FiveStageCore, self).__init__(io_dir / "FS_", instruction_memory, data_memory)
+        self.state = State()
+        self.next_state = State()
         self.opFilePath = io_dir / "StateResult_FS.txt"
 
     def step(self):
@@ -502,22 +504,13 @@ class FiveStageCore(Core):
         self.logger_data_memory_result()
 
         """Branch condition"""
-        # todo: **Assignment Doc: The branch conditions are resolved in the ID/RF stage of the pipeline**
-        # todo: When LW BNE, we need to insect TWO stalls and forward the data from MEM stage
         # PC adder
         self.next_state.IF["BranchPC"] = adder(self.state.ID["PC"], imm_gen_result)
-
-        # Determine if the branch should be taken
-        # todo: is_taken = (R1_value == R2_value)
-        # todo: modify MEM["ALUZero"], check the logic
 
 
         # Use forwarding unit to determine source for Rs1 and Rs2
         forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state, self.next_state)
         logger.debug(f"Branch forwarding debug: forward_a: {forward_a}, forward_b: {forward_b}")
-
-        if self.cycle == 3:
-            print("cycle = 3")
 
         # Get the operand values for the branch instruction
         branch_operand_a = multiplexer(forward_a,
