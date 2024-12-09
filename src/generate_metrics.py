@@ -2,6 +2,8 @@ from pathlib import Path
 
 
 def generate_metrics(perm, head_cont, cycles, tot_ins, io_dir: Path):
+    if cycles == 0:
+        return
     file_path = io_dir / "PerformanceMetrics_Result.txt"
 
     content = [head_cont + "\n",

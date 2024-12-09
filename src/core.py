@@ -4,7 +4,7 @@ from pathlib import Path
 from loguru import logger
 
 from src.components import arithmetic_logic_unit, alu_control_unit, adder, control_unit, imm_gen, multiplexer, and_gate, \
-    xor_gate, or_gate
+    xor_gate, or_gate, control_unit_for_single_stage
 from src.hazard_handler import forwarding_unit, hazard_detection_unit, forwarding_unit_for_branch
 from src.memory import InstructionMemory, DataMemory
 from src.register_file import RegisterFile
@@ -77,7 +77,7 @@ class SingleStageCore(Core):
 
         self.state.EX["nop"] = self.state.ID["nop"]
 
-        control_signals, halt = control_unit(opcode)
+        control_signals, halt = control_unit_for_single_stage(opcode)
         if halt:
             self.state.IF["nop"] = True
 
