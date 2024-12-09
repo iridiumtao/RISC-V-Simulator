@@ -525,9 +525,6 @@ class FiveStageCore(Core):
                                        self.state.WB["Wrt_data"],
                                        self.next_state.MEM["ALUresult"])
 
-        if self.cycle == 23:
-            print("cycle = 23")
-
         # Determine if the branch is taken (used to be ALUZero)
         logger.debug(f"Branch Handling debug: branch_operand_a: {branch_operand_a}, branch_operand_b: {branch_operand_b}")
         is_branch_taken = (branch_operand_a - branch_operand_b) == 0
@@ -545,6 +542,11 @@ class FiveStageCore(Core):
             # BNE, BEQ do not execute EX and the following stages, but JAL does
             if not jal:
                 self.next_state.EX["nop"] = True
+
+        # Handle JAL calculation (to comform with the assignment, i.e., EX.Read_data1 = PC, EX.Read_data2 = 4)
+        if jal:
+            self.next_state.EX["Read_data1"] = self.next_state.EX["PC"]
+            self.next_state.EX["Read_data2"] = 4
 
         logger.debug(
             f"Branch Handling debug: pc_src: {self.next_state.IF['PCSrc']}, branch: {branch}, is_branch_taken: {is_branch_taken}, bne_func: {bne_func}, jal: {jal}")

@@ -171,7 +171,7 @@ def control_unit(opcode: int):
         control_signals.update({
             "JAL": 1,
             "ALUSrcA": 1,
-            "ALUSrcB": 0b1,
+            "ALUSrcB": 0b0, # todo: SS will fail
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
