@@ -1,13 +1,11 @@
-from pathlib import Path
-from loguru import logger
 import difflib
-from typing import Literal
 import os
-import sys
+from pathlib import Path
+from typing import Literal
+
+from loguru import logger
 
 project_root = Path()
-
-
 
 
 def compare_files(testcases, filenames, stage_text: Literal["FS", "SS"]):
@@ -42,6 +40,8 @@ def compare_files(testcases, filenames, stage_text: Literal["FS", "SS"]):
                     print_diff_with_context(input_content, output_content, testcase, filename)
             else:
                 logger.error(f"{testcase}/{filename}: file not found")
+
+
 def print_diff_with_context(input_content, output_content, testcase, filename):
     """Print the differences with context (10 lines before and 5 lines after)."""
     diff = difflib.unified_diff(
@@ -54,6 +54,7 @@ def print_diff_with_context(input_content, output_content, testcase, filename):
 
     logger.info(f"\nDiff for {testcase}/{filename}:\n" + "\n".join(diff))
 
+
 def batch_run():
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase0'")
     # os.system("python3 main.py --iodir './Sample_Testcases_SS/input/testcase1'")
@@ -63,9 +64,9 @@ def batch_run():
     os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase2'")
     # os.system("python3 main.py --iodir './Sample_Testcases_FS/input/testcase3'")
 
+
 if __name__ == '__main__':
     batch_run()
-
 
     stage_text = "FS"
     testcase_dirs = ['testcase0',
@@ -76,17 +77,17 @@ if __name__ == '__main__':
         f'{stage_text}_DMEMResult.txt',
         f'{stage_text}_RFResult.txt',
         # f'StateResult_{stage_text}.txt'
-                 ]  # Add more filenames if necessary
+    ]  # Add more filenames if necessary
     compare_files(testcase_dirs, filenames, stage_text)
 
     stage_text = "SS"
     testcase_dirs = ['testcase0',
-                      'testcase1',
+                     'testcase1',
                      'testcase2'
                      ]  # Add more test cases as needed
     filenames = [
         f'{stage_text}_DMEMResult.txt',
         f'{stage_text}_RFResult.txt',
         f'StateResult_{stage_text}.txt'
-                 ]  # Add more filenames if necessary
+    ]  # Add more filenames if necessary
     compare_files(testcase_dirs, filenames, stage_text)

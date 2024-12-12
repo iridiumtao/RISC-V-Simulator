@@ -1,8 +1,9 @@
 from typing import Tuple
 
 from loguru import logger
-from src.state import State
+
 from src.components import multiplexer
+from src.state import State
 
 
 def forwarding_unit(state: State, next_state: State) -> (int, int):
@@ -50,10 +51,10 @@ def forwarding_unit(state: State, next_state: State) -> (int, int):
         forward_b = 0b01
         hint_b = "WB"
 
-
     logger.debug(f"Forwarding: {forward_a:#b} (Source:{hint_a}), {forward_b:#b} (Source:{hint_b})")
 
     return forward_a, forward_b
+
 
 def hazard_detection_unit(state: State) -> Tuple[bool, bool, bool]:
     """
@@ -123,23 +124,23 @@ def forwarding_unit_for_branch(rs1: int, rs2: int, state: State, next_state: Sta
     return forward_a, forward_b
 
 
-# 模擬不同狀態的 State class
+# Simulate different states of the State class
 from unittest import TestCase
 
 
 class TestForwardingUnit(TestCase):
 
     def setUp(self):
-        """ 初始化 state 狀態 """
+        """ Initialize state """
         self.state = State()
 
-        # 初始化 pipeline registers
+        # Initialize pipeline registers
         self.state.EX = {"Rs": 1, "Rt": 2, "Wrt_reg_addr": 0, "Read_data1": 0, "Read_data2": 0}
         self.state.MEM = {"wrt_enable": 0, "Wrt_reg_addr": 0, "ALUresult": 0}
         self.state.WB = {"wrt_enable": 0, "Wrt_reg_addr": 0, "Wrt_data": 0}
 
     def test_ex_mem_forwarding(self):
-        """ 測試 EX/MEM forwarding """
+        """ Test EX/MEM forwarding """
         self.state.EX["Rs"] = 1
         self.state.MEM["wrt_enable"] = 1
         self.state.MEM["Wrt_reg_addr"] = 1  # Rs forwarding match
@@ -149,7 +150,6 @@ class TestForwardingUnit(TestCase):
         self.assertEqual(forward_b, 0b00)
 
     def test_mem_wb_forwarding(self):
-        """ 測試 MEM/WB forwarding """
         self.state.EX["Rt"] = 2
         self.state.WB["wrt_enable"] = 1
         self.state.WB["Wrt_reg_addr"] = 2  # Rt forwarding match
@@ -159,7 +159,6 @@ class TestForwardingUnit(TestCase):
         self.assertEqual(forward_b, 0b01)
 
     def test_no_forwarding(self):
-        """ 測試無 forwarding """
         self.state.EX["Rs"] = 3
         self.state.EX["Rt"] = 4
         self.state.MEM["Wrt_reg_addr"] = 1
@@ -170,7 +169,6 @@ class TestForwardingUnit(TestCase):
         self.assertEqual(forward_b, 0b00)
 
     def test_ex_mem_priority(self):
-        """ 測試 EX/MEM forwarding 優先級 """
         self.state.EX["Rs"] = 1
         self.state.MEM["wrt_enable"] = 1
         self.state.MEM["Wrt_reg_addr"] = 1  # Rs forwarding match (EX/MEM)
@@ -182,21 +180,19 @@ class TestForwardingUnit(TestCase):
         self.assertEqual(forward_b, 0b00)
 
     def test_forwarding_unit_for_branch(self):
-        # 模擬 pipeline 狀態
+        # Simulate pipeline state
         state = State()
         state.MEM = {"wrt_enable": True, "Wrt_reg_addr": 3, "ALUresult": 42}
         state.WB = {"wrt_enable": True, "Wrt_reg_addr": 4, "Wrt_data": 99}
         state.ID = {"Rs1": 3, "Rs2": 4, "Read_data1": 10, "Read_data2": 20}
         print(state)
 
-        # 測試 forwarding
+        # Test forwarding
         forward_a, forward_b = forwarding_unit_for_branch(3, 4, state)
 
-        # 期望結果
         assert forward_a == 0b10, f"Expected 0b10, got {forward_a}"
         assert forward_b == 0b01, f"Expected 0b01, got {forward_b}"
 
-        # 使用 multiplexer 測試數值
         operand_a = multiplexer(forward_a, state.ID["Read_data1"], state.WB["Wrt_data"], state.MEM["ALUresult"])
         operand_b = multiplexer(forward_b, state.ID["Read_data2"], state.WB["Wrt_data"], state.MEM["ALUresult"])
 

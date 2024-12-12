@@ -171,7 +171,7 @@ def control_unit(opcode: int):
         control_signals.update({
             "JAL": 1,
             "ALUSrcA": 1,
-            "ALUSrcB": 0b0, # todo: SS will fail
+            "ALUSrcB": 0b0,  # todo: SS will fail
             "MemtoReg": 0,
             "RegWrite": 1,
             "MemRead": 0,
@@ -188,6 +188,7 @@ def control_unit(opcode: int):
         raise ValueError("Unsupported opcode")
 
     return control_signals, halt
+
 
 def control_unit_for_single_stage(opcode: int):
     control_signals = {
@@ -286,6 +287,7 @@ def control_unit_for_single_stage(opcode: int):
         raise ValueError("Unsupported opcode")
 
     return control_signals, halt
+
 
 def imm_gen(opcode: int, instr: int) -> int:
     """

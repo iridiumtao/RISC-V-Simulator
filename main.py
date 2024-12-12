@@ -1,10 +1,11 @@
 import argparse
 from pathlib import Path
-from src.memory import InstructionMemory, DataMemory
+
+from loguru import logger
+
 from src.core import SingleStageCore, FiveStageCore
 from src.generate_metrics import generate_metrics
-from loguru import logger
-import sys
+from src.memory import InstructionMemory, DataMemory
 
 if __name__ == "__main__":
     # logger.remove()
@@ -51,4 +52,4 @@ if __name__ == "__main__":
     dmem_fs.output_data_memory()
 
     generate_metrics("w", "Single Stage Core Performance Metrics", ssCore.cycle, ssCore.cycle - 1, ioDir)
-    generate_metrics("a", "Five Stage Core Performance Metrics", fsCore.cycle, ssCore.cycle-1, ioDir)
+    generate_metrics("a", "Five Stage Core Performance Metrics", fsCore.cycle, ssCore.cycle - 1, ioDir)

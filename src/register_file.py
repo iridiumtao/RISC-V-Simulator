@@ -1,6 +1,6 @@
 from pathlib import Path
-from loguru import logger
 
+from loguru import logger
 
 
 class RegisterFile(object):
@@ -34,7 +34,6 @@ class RegisterFile(object):
             data = 0
         logger.debug(f"Read register {reg_addr:05b}: {data:032b} ({data})")
         return data
-
 
     def write(self, reg_addr, write_reg_data):
         """

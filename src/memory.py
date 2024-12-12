@@ -1,10 +1,12 @@
 from pathlib import Path
+
 from loguru import logger
 
 # memory.py size, in reality, the memory.py size should be 2^32,
 # but for this lab, for the space resaon, we keep it as this large number,
 # but the memory.py is still 32-bit addressable.
 MEM_SIZE = 1000
+
 
 class InstructionMemory(object):
     """
@@ -26,7 +28,6 @@ class InstructionMemory(object):
             self.i_mem = [data.replace("\n", "") for data in im.readlines()]
             self.i_mem += ["0" * 8] * (MEM_SIZE - len(self.i_mem))
 
-
     def read(self, read_address: int) -> int:
         """
         Read an instruction from the instruction memory.
@@ -39,7 +40,7 @@ class InstructionMemory(object):
         """
 
         # load 4 piece of data and concatenate them
-        bin_str = ''.join(self.i_mem[read_address: read_address+4])
+        bin_str = ''.join(self.i_mem[read_address: read_address + 4])
         if bin_str == "":
             return 0
         return int(bin_str, 2)

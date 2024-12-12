@@ -210,7 +210,7 @@ class SingleStageCore(Core):
         if not self.state.IF["nop"]:
             self.next_state.IF["PC"] = program_counter
         else:
-            # 當nop時，保持PC不變
+            # When nop, keep PC unchanged
             self.next_state.IF["PC"] = self.state.IF["PC"]
 
         # ----------------------- End ------------------------
@@ -276,47 +276,36 @@ class FiveStageCore(Core):
                 self.state.WB["nop"]):
             self.halted = True
         # Your implementation
-        temp_nop = {"if": False, "id": False, "ex": False, "mem": False, "wb": False}
         # --------------------- WB stage ---------------------
 
         self.wb_stage()
-        temp_nop["wb"] = self.state.WB["nop"]
         self.next_state.WB["nop"] = self.update_nop_state(prev_stage_nop=self.state.MEM["nop"],
                                                           halt_detected=self.halt_detected)
 
         # --------------------- MEM stage --------------------
 
         self.mem_stage()
-        temp_nop["mem"] = self.state.MEM["nop"]
         self.next_state.MEM["nop"] = self.update_nop_state(prev_stage_nop=self.state.EX["nop"],
                                                            halt_detected=self.halt_detected)
 
         # --------------------- EX stage ---------------------
 
-
-
         self.ex_stage()
-        temp_nop["ex"] = self.state.EX["nop"]
         self.next_state.EX["nop"] = self.update_nop_state(prev_stage_nop=self.state.ID["nop"],
                                                           halt_detected=self.halt_detected)
 
         # --------------------- ID stage ---------------------
 
         self.id_stage()
-        temp_nop["id"] = self.state.ID["nop"]
         self.next_state.ID["nop"] = self.update_nop_state(prev_stage_nop=self.state.IF["nop"],
                                                           halt_detected=self.halt_detected)
 
         # --------------------- IF stage ---------------------
 
-        if (self.cycle == 7):
-            print("cycle = 7")
-
         # Only fetch new instructions if HALT hasn't been detected
         if not self.halt_detected:
             self.if_stage()
             logger.info(f"next_state: {self.next_state.IF}")
-            temp_nop["if"] = self.state.IF["nop"]
         else:
             logger.warning(f"IF stage No Operation")
             self.next_state.IF["nop"] = True
@@ -330,7 +319,7 @@ class FiveStageCore(Core):
 
         self.register_file.output(self.cycle)  # dump RF
 
-        self.state = copy.deepcopy(self.next_state)  # todo: test next state
+        self.state = copy.deepcopy(self.next_state)
         self.printState(self.state, self.cycle)  # print states after executing cycle 0, cycle 1, cycle 2 ...
 
         self.cycle += 1
@@ -339,18 +328,10 @@ class FiveStageCore(Core):
         logger.debug(f"--------------------- IF stage ")
         logger.info(f"state: {self.state.IF}")
 
-        if self.cycle == 7:
-            print("cycle = 7")
-
         """Condition Handlers, will not fetch instruction"""
         # When branch is taken, flush IF
         if self.state.IF["Flush"]:
             logger.warning(f"IF stage detected branch, Flush")
-            # todo: to conform to the assignment hidden requirements, we need to update the PC here
-            # bad practice
-            # self.next_state.IF["PC"] = adder(4, self.state.IF["PC"])
-            # self.next_state.IF["PCSrc"] = self.state.IF["PCSrc"]
-            # self.next_state.IF["BranchPC"] = self.state.IF["BranchPC"]
             self.next_state.ID["nop"] = True
             return
 
@@ -366,17 +347,14 @@ class FiveStageCore(Core):
 
         if self.state.IF["nop"]:
             logger.warning(f"IF stage No Operation")
-            # todo: maybe ?
-            # self.next_state.ID["Instr"] =
-            # self.next_state.ID["PC"] =
             return
 
         """Decide which PC to use"""
 
         # Decide PC depends on whether Branch happen (PCSrc=1) or not
         self.state.IF["PC"] = multiplexer(self.next_state.IF["PCSrc"],
-                                      self.state.IF["PC"],
-                                      self.next_state.IF["BranchPC"])
+                                          self.state.IF["PC"],
+                                          self.next_state.IF["BranchPC"])
 
         logger.info(f"PC: {self.state.IF["PC"]}")
 
@@ -400,7 +378,6 @@ class FiveStageCore(Core):
                                          adder(4, self.state.IF["PC"]))
         self.next_state.IF["PC"] = if_stage_pc_result
         logger.debug(f"PC Handling debug: Next PC: {self.next_state.IF["PC"]}")
-
 
     def id_stage(self):
         logger.debug(f"--------------------- ID stage ")
@@ -449,7 +426,6 @@ class FiveStageCore(Core):
         """Control Signal mapping"""
         control_signals, halt = control_unit(opcode)
         if halt:
-            # todo: potentially missing "halt on next cycle"
             self.halt_detected = True
             self.next_state.IF["nop"] = True
 
@@ -507,7 +483,6 @@ class FiveStageCore(Core):
         # PC adder
         self.next_state.IF["BranchPC"] = adder(self.state.ID["PC"], imm_gen_result)
 
-
         # Use forwarding unit to determine source for Rs1 and Rs2
         forward_a, forward_b = forwarding_unit_for_branch(rs1, rs2, self.state, self.next_state)
         logger.debug(f"Branch forwarding debug: forward_a: {forward_a}, forward_b: {forward_b}")
@@ -523,14 +498,14 @@ class FiveStageCore(Core):
                                        self.next_state.MEM["ALUresult"])
 
         # Determine if the branch is taken (used to be ALUZero)
-        logger.debug(f"Branch Handling debug: branch_operand_a: {branch_operand_a}, branch_operand_b: {branch_operand_b}")
+        logger.debug(
+            f"Branch Handling debug: branch_operand_a: {branch_operand_a}, branch_operand_b: {branch_operand_b}")
         is_branch_taken = (branch_operand_a - branch_operand_b) == 0
 
         # Branch handling, BEQ, BNE handling, JAL handling
-        # todo: maybe `next_state`, check with StateResult_FS.txt afterward
         self.next_state.IF["PCSrc"] = or_gate(jal, and_gate(branch,
-                                                       xor_gate(is_branch_taken,
-                                                                bne_func)))
+                                                            xor_gate(is_branch_taken,
+                                                                     bne_func)))
 
         # if branch taken
         if self.next_state.IF["PCSrc"]:
@@ -710,8 +685,13 @@ class FiveStageCore(Core):
         """
         update next nop state
 
-        Condition 1: if last cycle is NOP and not HALT, clear NOP
-        Condition 2: if last stage is NOP, current stage should be NOP
+        Condition 1: automatically turn off NOP,
+            i.e., if the last cycle is NOP (and not HALT), set NOP to False in the next cycle
+
+        Condition 2: automatically pass NOP state to the next stage,
+            i.e., if last stage is NOP, the current stage should be NOP
+
+        Condition 3: when halt, keep operating until the previous stage is NOP
 
         :param prev_stage_nop: previous stage NOP state
         :param halt_detected: HALT state, if True, return True。
@@ -719,10 +699,10 @@ class FiveStageCore(Core):
         """
         if halt_detected and prev_stage_nop:
             return True
-        # Condition 2
+
         if prev_stage_nop:
             return True
-        # Condition 1
+
         return False
 
     def set_init_nop_state(self):
@@ -732,26 +712,18 @@ class FiveStageCore(Core):
             self.state.EX["nop"] = True
             self.state.MEM["nop"] = True
             self.state.WB["nop"] = True
-        # elif self.cycle == 1:
-        #     self.state.IF["nop"] = False
-        #     self.state.ID["nop"] = False
-        #     self.state.EX["nop"] = False
-        #     self.state.MEM["nop"] = True
-        #     self.state.WB["nop"] = True
-        # elif self.cycle == 2:
-        #     self.state.IF["nop"] = False
-        #     self.state.ID["nop"] = False
-        #     self.state.EX["nop"] = False
-        #     self.state.MEM["nop"] = False
-        #     self.state.WB["nop"] = True
-        # elif self.cycle == 3:
-        #     self.state.IF["nop"] = False
-        #     self.state.ID["nop"] = False
-        #     self.state.EX["nop"] = False
-        #     self.state.MEM["nop"] = False
-        #     self.state.WB["nop"] = False
 
     def printState(self, state, cycle):
+        """
+        According to TA, StateResult.txt would NOT be graded.
+        This function is NOT really required for grading,
+        but may be used for the TA team to debug the internal working of your simulator
+        just in case we would want to.
+
+        :param state:
+        :param cycle:
+        :return:
+        """
         def format_binary(val, bits=32):
             """Format the value as a binary string and pad it to the specified length."""
             if isinstance(val, int):

@@ -29,7 +29,8 @@ class State(object):
 
         self.EX = {"nop": False, "Read_data1": 0, "Read_data2": 0, "Imm": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0,
                    "is_I_type": False, "rd_mem": 0,
-                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC":0, "alu_control_func": 0, "branch": 0, "jal": 0, "instr": 0}
+                   "wrt_mem": 0, "alu_op": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0, "alu_control_func": 0,
+                   "branch": 0, "jal": 0, "instr": 0}
         """ ID/EX Pipeline register
         
         "Execution/address calculation: The signals to be set are ALUOp and ALUSrc (see Figures 4.49 and 4.50). The signals select the ALU operation and either Read data 2 or a sign-extended immediate as inputs to the ALU."  Comp.Org P.331
@@ -64,7 +65,8 @@ class State(object):
         }"""
 
         self.MEM = {"nop": False, "ALUresult": 0, "Store_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "rd_mem": 0,
-                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0, "ALUZero": 0, "bne": 0, "branch": 0, "jal": 0}
+                    "wrt_mem": 0, "wrt_enable": 0, "mem_to_reg": 0, "PC": 0, "ALUZero": 0, "bne": 0, "branch": 0,
+                    "jal": 0}
         """ EX/MEM Pipeline register
         
         "Memory access: The control lines set in this stage are Branch, MemRead, and MemWrite. The branch if equal, load, and store instructions set these signals, respectively. Recall that PCSrc in Figure 4.50 selects the next sequential address unless control asserts Branch and the ALU result was 0." Comp.Org P.331
@@ -90,7 +92,8 @@ class State(object):
           wrt_enable: 1 bit WB Control: RegWrite,
           * mem_to_reg: 1 bit WB Control: MemtoReg}"""
 
-        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0, "ALUresult": 0, "read_data": 0}
+        self.WB = {"nop": False, "Wrt_data": 0, "Rs": 0, "Rt": 0, "Wrt_reg_addr": 0, "wrt_enable": 0, "mem_to_reg": 0,
+                   "ALUresult": 0, "read_data": 0}
         """ MEM/WB Pipeline register
          
          "Write-back: The two control lines are MemtoReg, which decides between sending the ALU result or the memory value to the register file, and RegWrite, which writes the chosen value." Comp.Org P.331
