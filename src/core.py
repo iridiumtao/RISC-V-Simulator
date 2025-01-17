@@ -601,11 +601,6 @@ class FiveStageCore(Core):
             alu_control=alu_control,
             a=alu_input_a,
             b=alu_input_b)
-        # bne_func = (self.state.EX["alu_control_func"] & 0x1)
-        # logger.debug(
-        #     f"PC Handling debug: alu_control_func_code: {self.state.EX["alu_control_func"]}, bne_func: {bne_func}")
-        # self.next_state.MEM["bne"] = bne_func
-        # self.next_state.MEM["ALUZero"] = zero
 
     def mem_stage(self):
         logger.debug(f"--------------------- MEM stage ")
