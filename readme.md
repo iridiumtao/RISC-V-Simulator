@@ -4,6 +4,7 @@ This is a Single-stage and 5-stage pipelined RISC-V Simulator written in Python.
 The simulator reads the binary content of dmem.txt (data memory) and imem.txt (instruction memory) in `./iodir` and outputs step-by-step results in RFResult.txt (Register File Result) and StateResult.txt (Pipeline register state), the DMEMResult.txt (Data MEMory Result), and PerformanceMetrics_Result.txt
 
 This project is part of the NYU Master of Science in Computer Engineering (MSCE) course focused on Computing Systems Architecture (CSA).
+
 ## Schematic
 
 ### Single Stage
